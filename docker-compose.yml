@@ -1,0 +1,149 @@
+version: '3.8'
+
+# =========================================================
+# Sentinel Base Configuration (YAML Anchor)
+# Keeps the compose file DRY by sharing the init script
+# =========================================================
+x-sentinel-config: &sentinel-config
+  image: redis:7.4.8-alpine3.21
+  command: >
+    sh -c "echo 'port 26379' > /tmp/sentinel.conf &&
+    echo 'sentinel monitor mymaster potamic-kvrocks-sentinel-master 6667 2' >> /tmp/sentinel.conf &&
+    echo 'sentinel down-after-milliseconds mymaster 5000' >> /tmp/sentinel.conf &&
+    echo 'sentinel failover-timeout mymaster 10000' >> /tmp/sentinel.conf &&
+    echo 'sentinel parallel-syncs mymaster 1' >> /tmp/sentinel.conf &&
+    echo 'sentinel resolve-hostnames yes' >> /tmp/sentinel.conf &&
+    echo 'sentinel announce-hostnames yes' >> /tmp/sentinel.conf &&
+    echo 'sentinel auth-pass mymaster secret' >> /tmp/sentinel.conf &&
+    redis-server /tmp/sentinel.conf --sentinel"
+  depends_on:
+    - potamic-kvrocks-sentinel-master
+    - potamic-kvrocks-sentinel-replica
+
+services:
+  # =========================================================
+  # 1. Kvrocks Data Layer
+  # =========================================================
+  potamic-kvrocks-sentinel-master:
+    image: apache/kvrocks:2.15.0
+    container_name: potamic-kvrocks-sentinel-master
+    command:
+      - "--bind"
+      - "0.0.0.0"
+      - "--port"
+      - "6667"
+      - "--requirepass"
+      - "secret"
+    ports:
+      - "6667:6667"
+
+  potamic-kvrocks-sentinel-replica:
+    image: apache/kvrocks:2.15.0
+    container_name: potamic-kvrocks-sentinel-replica
+    command:
+      - "--bind"
+      - "0.0.0.0"
+      - "--port"
+      - "6667"
+      - "--requirepass"
+      - "secret"
+      - "--masterauth"
+      - "secret"
+      - "--slaveof"
+      - "potamic-kvrocks-sentinel-master 6667"
+    ports:
+      - "6668:6667" # Mapped to 6668 on your host machine to prevent collisions
+    depends_on:
+      - potamic-kvrocks-sentinel-master
+
+  # =========================================================
+  # 2. Redis Sentinel Orchestration Layer
+  # =========================================================
+  potamic-sentinel-0:
+    <<: *sentinel-config
+    container_name: potamic-sentinel-0
+    ports:
+      - "26379:26379"
+
+  potamic-sentinel-1:
+    <<: *sentinel-config
+    container_name: potamic-sentinel-1
+    ports:
+      - "26380:26379"
+
+  potamic-sentinel-2:
+    <<: *sentinel-config
+    container_name: potamic-sentinel-2
+    ports:
+      - "26381:26379"
+
+  # =========================================================
+  # 3. Single Redis
+  # =========================================================
+  potamic-redis-standalone:
+    image: redis:7.4.8-alpine3.21
+    container_name: potamic-redis-standalone
+    command:
+      - "--bind"
+      - "0.0.0.0"
+      - "--port"
+      - "6379"
+      - "--requirepass"
+      - "secret"
+    ports:
+      - "6379:6379"
+
+  # =========================================================
+  # 4. Single Kvrocks
+  # =========================================================
+  potamic-kvrocks-standalone:
+    image: apache/kvrocks:2.15.0
+    container_name: potamic-kvrocks-standalone
+    command:
+      - "--bind"
+      - "0.0.0.0"
+      - "--port"
+      - "6666"
+      - "--requirepass"
+      - "secret"
+    ports:
+      - "6666:6666"
+
+  # =========================================================
+  # 5. HAProxy Gateway (The Smart Router)
+  # =========================================================
+  potamic-kvrocks-haproxy:
+    image: haproxy:2.8-alpine
+    container_name: potamic-kvrocks-haproxy
+    command:
+      - "sh"
+      - "-c"
+      - |
+        cat << 'EOF' > /tmp/haproxy.cfg
+        global
+            log stdout format raw local0
+        defaults
+            mode tcp
+            timeout connect 4s
+            timeout server 300s
+            timeout client 300s
+        frontend db_gateway
+            bind *:6669
+            default_backend kvrocks_master
+        backend kvrocks_master
+            option tcp-check
+            tcp-check send AUTH\ secret\r\n
+            tcp-check expect string +OK
+            # Send INFO and QUIT in the exact same TCP packet
+            tcp-check send INFO\ replication\r\nQUIT\r\n
+            tcp-check expect string role:master
+
+            server kvrocks-0 potamic-kvrocks-sentinel-master:6667 check inter 2s
+            server kvrocks-1 potamic-kvrocks-sentinel-replica:6667 check inter 2s
+        EOF
+        haproxy -f /tmp/haproxy.cfg
+    ports:
+      - "6669:6669"
+    depends_on:
+      - potamic-kvrocks-sentinel-master
+      - potamic-kvrocks-sentinel-replica

@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+script_dir=$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
+cd "$script_dir"
+cd ..
+
+source bin/format.sh
+
+print "${PX_BLUE}${PX_LOGO}${PX_NC}\n"
+
+names=(
+  kvrocks-standalone
+  redis-standalone
+  kvrocks-haproxy
+  kvrocks-sentinel-master
+  kvrocks-sentinel-replica
+  kvrocks-sentinel-0
+  kvrocks-sentinel-1
+  kvrocks-sentinel-2
+)
+
+for name in "${names[@]}"; do
+    if [ "$(docker ps -aq -f name=$name)" ]; then
+        echo "Removing existing container: $name"
+        docker rm -f "$name"
+    fi
+done
+
+docker compose down --remove-orphans
+docker compose up
