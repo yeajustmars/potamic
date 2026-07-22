@@ -200,7 +200,7 @@
               :queue-name queue-name
               :init-id init-id
               :group group-name}]
-    (if-let [args-err (v/invalidate qv/Valid-Create-Queue-Args args)]
+    (if-let [args-err (v/invalidate qv/CreateQueueArgs args)]
       [nil (e/error {:potamic/err-type :potamic/args-err
                      :potamic/err-fatal? false
                      :potamic/err-msg (str "Invalid args provided to "
@@ -275,11 +275,10 @@
         msgs (map util/encode-map-vals
                   (if id-set? (rest xs) xs))]
     (try
-      (let [[?err :as r
-             ] (wcar conn
-                     :as-pipeline
-                     (mapv #(apply car/xadd qname id (reduce into [] %))
-                           msgs))]
+      (let [[?err :as r] (wcar conn
+                               :as-pipeline
+                               (mapv #(apply car/xadd qname id (reduce into [] %))
+                                     msgs))]
         (if (instance? clojure.lang.ExceptionInfo ?err)
           (throw ?err)
           [r nil]))
@@ -453,7 +452,7 @@
                     :start start
                     :end end
                     :count cnt)]
-    (if-let [args-err (v/invalidate qv/Valid-Read-Range-Args args)]
+    (if-let [args-err (v/invalidate qv/ReadRangeArgs args)]
       [nil
        (e/error {:potamic/err-type :potamic/args-err
                  :potamic/err-fatal? false
@@ -707,7 +706,7 @@
                     :start start
                     :end end
                     :count count*)]
-    (if-let [args-err (v/invalidate qv/Valid-Read-Pending-Args args)]
+    (if-let [args-err (v/invalidate qv/ReadPendingArgs args)]
       [nil
        (e/error {:potamic/err-type :potamic/args-err
                  :potamic/err-fatal? false
@@ -853,7 +852,7 @@
   (let [opts* (apply hash-map opts)
         unsafe? (boolean (:unsafe opts*))
         args {:conn conn :queue-name queue-name :unsafe unsafe?}]
-    (if-let [args-err (v/invalidate qv/Valid-Destroy-Queue-Args args)]
+    (if-let [args-err (v/invalidate qv/DestroyQueueArgs args)]
       [nil (e/error {:potamic/err-type :potamic/args-err
                      :potamic/err-fatal? false
                      :potamic/err-msg (str "Invalid args provided to "

@@ -68,8 +68,7 @@
       (is (= 0 (:start-offset s)))
       (is (= {:started? false
               :stopped? false
-              :n-runs 0} (s/get-state s)))
-      )))  ; end create-sentinel-test
+              :n-runs 0} (s/get-state s))))))
 
 (deftest sentinel-runtime-test
   (testing "st.queue/sentinel-runtime"
@@ -102,8 +101,7 @@
             (testing "-- (not) started?"
               (is (= (attr* s :started?) false)))
             (testing "-- stopped?"
-              (is (= (attr* s :stopped?) true))))))
-      ))) ; end sentinel-runtime-test
+              (is (= (attr* s :stopped?) true)))))))))
 
 (deftest sentinel-producer-consumer-test1
   (testing "queue read/write from within Sentinel"
@@ -122,5 +120,4 @@
             [msgs ?err] (q/read-next! 1 :from qname :as consumer :block 500)]
         (is (nil? ?err))
         (is (= (count msgs) 1))
-        (is (= (-> msgs first :msg) {"1" "Message put!"}))
-        )))) ; end sentinel-producer-consumer-test1
+        (is (= (-> msgs first :msg) {"1" "Message put!"}))))))

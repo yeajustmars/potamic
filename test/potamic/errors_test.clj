@@ -8,8 +8,7 @@
     (is (= et/error-types
            #{:potamic/args-err
              :potamic/db-err
-             :potamic/internal-err}))
-    )) ; end error-types-test
+             :potamic/internal-err}))))
 
 (deftest error-test
   (testing "potamic.errors/error"
@@ -30,5 +29,4 @@
       (is (= err-file "potamic/errors_test.clj"))
       (is (= err-data {:a 1 :b 2}))
       (is (= err-msg "ERROR MSG"))
-      (is (= err-type :potamic/args-err))
-      ))) ; end error-test
+      (is (= err-type :potamic/args-err)))))

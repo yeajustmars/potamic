@@ -35,8 +35,7 @@
   (testing "potamic.queue/create-queue!"
     (let [[status ?err] (q/create-queue! :secondary/queue conn)]
       (is (= :created-with-new-stream status))
-      (is (nil? ?err)))
-    )) ; end create-queue!-test
+      (is (nil? ?err)))))
 
 (deftest get-queues-test
   (testing "potamic.queue/get-queues"
@@ -57,9 +56,7 @@
                                 :redis-group-name "second/group",
                                 :redis-queue-name "secondary/queue"}}
              (walk/postwalk (fn [x] (if (map? x) (dissoc x :pool) x))
-                            (q/get-queues))
-             ))
-      ))) ; end get-queues-test
+                            (q/get-queues)))))))
 
 (deftest get-queue-test
   (testing "potamic.queue/get-queue"
@@ -69,8 +66,7 @@
               :queue-conn {:pool {}, :spec {:uri db-uri}},
               :queue-name test-queue
               :redis-group-name "my/test-queue-group"
-              :redis-queue-name "my/test-queue"}))
-      ))) ; end get-queue-test
+              :redis-queue-name "my/test-queue"})))))
 
 (deftest put-test
   (testing "potamic.queue/put"
@@ -83,8 +79,7 @@
       (let [[?ids ?err] (q/put test-queue {:a 1} {:b 2} {:c 3})]
         (is (nil? ?err))
         (is (= (count ?ids) 3))
-        (is (every? identity (mapv #(re-find id-pat %) ?ids)))))
-    )) ; end put-test
+        (is (every? identity (mapv #(re-find id-pat %) ?ids)))))))
 
 (deftest read-test
   (testing "potamic.queue/read"
@@ -104,8 +99,7 @@
       (is (= read1-msgs read2-msgs))
       (is (re-find id-pat (:id (first read3-msgs))))
       (is (= 1 (count read3-msgs)))
-      (is (= (:msg (first read3-msgs)) {:d 4})))
-    )) ; end read-test
+      (is (= (:msg (first read3-msgs)) {:d 4})))))
 
 (deftest read-next!-test
   (testing "potamic.queue/read-next!"
@@ -126,8 +120,7 @@
         (is (re-find id-pat (:id (first ?msgs))))
         (is (re-find id-pat (:id (second ?msgs))))
         (is (= (:msg (first ?msgs)) {:b 2}))
-        (is (= (:msg (second ?msgs)) {:c 3}))))
-    )) ; end read-next!-test
+        (is (= (:msg (second ?msgs)) {:c 3}))))))
 
 (deftest read-pending-test
   (testing "potamic.queue/read-pending"
@@ -157,8 +150,7 @@
       (is (= (count read3) 1))
       (is (= (:id (first read1)) (:id (first read2))))
       (is (= (:id (first read2)) (:id (first read3))))
-      (is (= (:id (first read1)) (:id (first read3))))
-      ))) ; end read-pending-test
+      (is (= (:id (first read1)) (:id (first read3)))))))
 
 (deftest read-pending-summary-test
   (testing "potamic.queue/read-pending-summary"
@@ -186,8 +178,7 @@
       (is (= (:total p2-summary) 3))
       (is (re-find id-pat (:start p2-summary)))
       (is (re-find id-pat (:end p2-summary)))
-      (is (= (:consumers p2-summary) {:my/consumer1 2, :my/consumer2 1}))
-      ))) ; end read-pending-summary-test
+      (is (= (:consumers p2-summary) {:my/consumer1 2, :my/consumer2 1})))))
 
 (deftest read-range-test
   (testing "potamic.queue/read-range"
@@ -204,8 +195,7 @@
       (is (= (:msg (first r2)) {:a 1}))
       (is (= (:msg (second r2)) {:b 2}))
       (is (= (:msg (nth r2 2)) {:c 3}))
-      (is (= (:msg (first r1)) (:msg (first r2)))))
-    )) ; end read-range-test
+      (is (= (:msg (first r1)) (:msg (first r2)))))))
 
 (deftest set-processed!-test
   (testing "potamic.queue/set-processed!"
@@ -217,8 +207,7 @@
           [n-acked ?ack-err] (apply q/set-processed! test-queue ids)]
       (is (nil? ?read-err))
       (is (nil? ?ack-err))
-      (is (= 3 n-acked))
-      ))) ; end set-processed!-test
+      (is (= 3 n-acked)))))
 
 (deftest delete-queue-test
   (testing "potamic.queue/delete-queue"
@@ -240,8 +229,7 @@
       (is (nil? ?destroy-err))
       (is (= :spec-destroyed_stream-destroyed destroyed-status))
       (is (nil? ?nonexistent-err))
-      (is (= :spec-nonexistent_stream-nonexistent nonexistent-status))
-      ))) ; end delete-queue-test
+      (is (= :spec-nonexistent_stream-nonexistent nonexistent-status)))))
 
 (deftest create-destroy-cycle-test
   (testing "creating > destroying > creating cycle"

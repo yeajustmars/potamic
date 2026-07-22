@@ -995,8 +995,7 @@
               :frequency frequency
               :start-offset start-offset
               :handler handler}]
-    (if-let [args-err (v/invalidate sv/Valid-Create-Sentinel-Args
-                                    args)]
+    (if-let [args-err (v/invalidate sv/CreateSentinelArgs args)]
       (let [err (e/error
                   {:potamic/err-type :potamic/args-err
                    :potamic/err-fatal? true

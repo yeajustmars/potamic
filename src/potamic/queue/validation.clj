@@ -7,36 +7,36 @@
 
 (def queue-exists? (v/f (fn [x] (get @queues/queues_ x)) "Unknown queue"))
 
-(def valid-queue-value? [:or keyword? symbol? string?])
+(def QueueValue [:or keyword? symbol? string?])
 
-(def Valid-Create-Queue-Args
+(def CreateQueueArgs
   (malli/schema
     [:map {:closed true}
-     [:queue-name valid-queue-value?]
-     [:conn dbv/Valid-Conn]
+     [:queue-name QueueValue]
+     [:conn dbv/Conn]
      [:group {:optional true} [:or keyword? symbol? string? nil?]]
      [:init-id {:optional true} [:or int? string?]]]))
 
-(def Valid-Destroy-Queue-Args
+(def DestroyQueueArgs
   (malli/schema
     [:map {:closed true}
-     [:queue-name [:and valid-queue-value?]]
-     [:conn dbv/Valid-Conn]
+     [:queue-name [:and QueueValue]]
+     [:conn dbv/Conn]
      [:unsafe {:optional true} boolean?]]))
 
-(def Valid-Read-Pending-Args
+(def ReadPendingArgs
   (malli/schema
     [:map {:closed true}
      [:count int?]
-     [:from [:and valid-queue-value? queue-exists?]]
+     [:from [:and QueueValue queue-exists?]]
      [:for {:optional true} [:or keyword? symbol? string?]]
      [:start {:optional true} [:or keyword? symbol? string?]]
      [:end {:optional true} [:or keyword? symbol? string?]]]))
 
-(def Valid-Read-Range-Args
+(def ReadRangeArgs
   (malli/schema
     [:map {:closed true}
-     [:queue-name [:and valid-queue-value? queue-exists?]]
+     [:queue-name [:and QueueValue queue-exists?]]
      [:count {:optional true} [:or int? nil?]]
      [:start {:optional true} [:or keyword? symbol? string?]]
      [:end {:optional true} [:or keyword? symbol? string?]]]))

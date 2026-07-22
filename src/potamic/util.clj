@@ -1,7 +1,9 @@
 (ns potamic.util
   "Common utilities."
-  (:require [com.rpl.specter :as s]
+  (:require [clojure.string :as string]
+            [com.rpl.specter :as s]
             [taoensso.nippy :as nippy])
+  (:import [java.net URI])
   (:gen-class))
 
 (defn ->str
@@ -164,3 +166,33 @@
   ```"
   [m]
   (into {} (for [[k v] m] [k (nippy/freeze v)])))
+
+(defn parse-redis-uri
+  "Parses a Redis URI string using java.net.URI into a Clojure map of the form:
+
+  ```clojure
+  {:scheme \"redis\"
+   :user \"STRING|nil\"
+   :password \"STRING|nil\"
+   :host \"STRING\"
+   :port \"INT\"
+   :db \"INT|nil\"}
+  ```"
+  [uri-str]
+  (let [uri (URI. uri-str)
+        user-info (.getUserInfo uri)
+        [user password] (when (seq user-info)
+                          (string/split user-info #":" 2))
+        path (.getPath uri)
+        db (when (and (seq path) (re-find #"/[0-9]+" path))
+             (try
+               (Integer/parseInt (subs path 1))
+               (catch Exception _
+                 0)))]
+    {:scheme (.getScheme uri)
+     :user user
+     :password password
+     :host (.getHost uri)
+     :port (let [p (.getPort uri)]
+             (when (pos? p) p))
+     :db db}))
