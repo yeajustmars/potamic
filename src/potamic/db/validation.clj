@@ -9,8 +9,9 @@
 (def Conn
   (malli/schema
     [:map {:closed true}
-     OptionalBackend
-     [:spec [:map {:closed true} [:uri (v/f v/valid-redis-uri? "Invalid Redis URI")]]]
+     [:spec [:map {:closed true}
+             [:uri (v/f v/valid-redis-uri? "Invalid Redis URI")]
+             OptionalBackend]]
      [:pool {:optional true} map?]]))
 
 (def ConnArgs

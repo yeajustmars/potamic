@@ -8,9 +8,7 @@
             [potamic.fmt :refer [GREEN NC]]
             [potamic.queue :as p]
             [potamic.sentinel.validation :as sv]
-            [potamic.util :as pu]
             [potamic.validation :as v]
-            [taoensso.carmine :as car :refer [wcar]]
             [taoensso.timbre :as log])
   (:gen-class))
 
@@ -979,13 +977,7 @@
   - `potamic.sentinel/set-attr`
   - `potamic.sentinel/start-sentinel!`
   - `potamic.sentinel/stop-sentinel!`"
-  [{:keys [queue-uri
-           queue-name
-           queue-group
-           init-id
-           frequency
-           start-offset
-           handler]
+  [{:keys [queue-uri queue-name queue-group init-id frequency start-offset handler]
     :or {start-offset 0 init-id 0}}]
   (let [queue-conn (potamic.db/make-conn :uri queue-uri)
         args {:queue-conn queue-conn

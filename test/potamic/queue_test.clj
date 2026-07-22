@@ -46,12 +46,14 @@
       (is (= :created-with-new-stream status))
       (is (nil? ?err))
       (is (= {:my/test-queue {:group-name :my/test-queue-group,
-                              :queue-conn {:spec {:uri "redis://default:secret@localhost:6379/0"}},
+                              :queue-conn {:spec {:backend :redis
+                                                  :uri "redis://default:secret@localhost:6379/0"}},
                               :queue-name :my/test-queue,
                               :redis-group-name "my/test-queue-group",
                               :redis-queue-name "my/test-queue"},
               :secondary/queue {:group-name :second/group,
-                                :queue-conn {:spec {:uri "redis://default:secret@localhost:6379/0"}},
+                                :queue-conn {:spec {:backend :redis
+                                                    :uri "redis://default:secret@localhost:6379/0"}},
                                 :queue-name :secondary/queue,
                                 :redis-group-name "second/group",
                                 :redis-queue-name "secondary/queue"}}
@@ -63,7 +65,8 @@
     (let [my-queue (q/get-queue test-queue)]
       (is (= (assoc-in my-queue [:queue-conn :pool] {})
              {:group-name test-queue-group
-              :queue-conn {:pool {}, :spec {:uri db-uri}},
+              :queue-conn {:pool {}
+                           :spec {:backend :redis :uri db-uri}},
               :queue-name test-queue
               :redis-group-name "my/test-queue-group"
               :redis-queue-name "my/test-queue"})))))

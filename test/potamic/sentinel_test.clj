@@ -1,16 +1,15 @@
 (ns potamic.sentinel-test
   "Tests `st.queue`."
-  {:added "5.0"
+  {:added "0.1"
    :author "Chad Angelelli"}
   (:require
-    [clojure.core.async :as async :refer [<! >! <!! >!!]]
+    [clojure.core.async :as async :refer [<!!]]
     [clojure.test :refer (deftest is testing use-fixtures)]
     [potamic.db]
-    [potamic.fmt :as fmt :refer [echo BOLD NC RED GREEN]]
+    [potamic.fmt :as fmt]
     [potamic.queue :as q]
     [potamic.queue.queues :as queues]
     [potamic.sentinel :as s]
-    [potamic.util :as u]
     [taoensso.carmine :as car :refer [wcar]])
   (:import [taoensso.carmine.connections ConnectionPool]))
 
@@ -59,7 +58,8 @@
     (let [s' (basic-sentinel #(println (attr* % :n-runs)) 2000)
           s (update s' :queue-conn dissoc :pool)]
       (is (instance? ConnectionPool (get-in s' [:queue-conn :pool])))
-      (is (= {:spec {:uri "redis://default:secret@localhost:6379/0"}}
+      (is (= {:spec {:backend :redis
+                     :uri "redis://default:secret@localhost:6379/0"}}
              (:queue-conn s)))
       (is (= 'my/queue (:queue-name s)))
       (is (= 'my/group (:queue-group s)))
