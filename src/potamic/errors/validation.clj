@@ -1,7 +1,6 @@
 (ns potamic.errors.validation
   (:require [malli.core :as malli]
-            [potamic.errors.types :as potamic])
-  (:gen-class))
+            [potamic.errors.types :as potamic]))
 
 (def PotamicError
   "Validates input for `potamic.errors/error` macro. Required keys are

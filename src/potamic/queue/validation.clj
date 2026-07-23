@@ -2,8 +2,7 @@
   (:require [malli.core :as malli]
             [potamic.validation :as v]
             [potamic.db.validation :as dbv]
-            [potamic.queue.queues :as queues])
-  (:gen-class))
+            [potamic.queue.queues :as queues]))
 
 (def queue-exists? (v/f (fn [x] (get @queues/queues_ x)) "Unknown queue"))
 

@@ -3,8 +3,7 @@
   (:require [clojure.string :as string]
             [com.rpl.specter :as s]
             [taoensso.nippy :as nippy])
-  (:import [java.net URI])
-  (:gen-class))
+  (:import [java.net URI]))
 
 (defn ->str
   "Returns a string representation of symbol. This is similar to calling `str`

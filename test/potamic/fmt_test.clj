@@ -13,41 +13,15 @@
 |_| \\___/\\__\\__,_|_|_|_|_\\__|
 "))))
 
-(deftest BLUE-test
-  (testing "potamic.fmt/BLUE"
-    (is (= fmt/BLUE "\033[0;34m"))))
-
-(deftest BOLD-test
-  (testing "potamic.fmt/BOLD"
-    (is (= fmt/BOLD "\033[1m"))))
-
-(deftest CYAN-test
-  (testing "potamic.fmt/CYAN"
-    (is (= fmt/CYAN "\033[0;36m"))))
-
-(deftest GREEN-test
-  (testing "potamic.fmt/GREEN"
-    (is (= fmt/GREEN "\033[0;32m"))))
-
-(deftest ITAL-test
-  (testing "potamic.fmt/ITAL"
-    (is (= fmt/ITAL "\033[3m"))))
-
-(deftest NC-test
-  (testing "potamic.fmt/NC"
-    (is (= fmt/NC "\033[0m"))))
-
-(deftest ORANGE-test
-  (testing "potamic.fmt/ORANGE"
-    (is (= fmt/ORANGE "\033[0;33m"))))
-
-(deftest PURPLE-test
-  (testing "potamic.fmt/PURPLE"
-    (is (= fmt/PURPLE "\033[0;35m"))))
-
-(deftest RED-test
-  (testing "potamic.fmt/RED"
-    (is (= fmt/RED "\033[0;31m"))))
+(deftest BLUE-test   (testing "potamic.fmt/BLUE"   (is (= fmt/BLUE   "\033[0;34m"))))
+(deftest BOLD-test   (testing "potamic.fmt/BOLD"   (is (= fmt/BOLD   "\033[1m"))))
+(deftest CYAN-test   (testing "potamic.fmt/CYAN"   (is (= fmt/CYAN   "\033[0;36m"))))
+(deftest GREEN-test  (testing "potamic.fmt/GREEN"  (is (= fmt/GREEN  "\033[0;32m"))))
+(deftest ITAL-test   (testing "potamic.fmt/ITAL"   (is (= fmt/ITAL   "\033[3m"))))
+(deftest NC-test     (testing "potamic.fmt/NC"     (is (= fmt/NC     "\033[0m"))))
+(deftest ORANGE-test (testing "potamic.fmt/ORANGE" (is (= fmt/ORANGE "\033[0;33m"))))
+(deftest PURPLE-test (testing "potamic.fmt/PURPLE" (is (= fmt/PURPLE "\033[0;35m"))))
+(deftest RED-test    (testing "potamic.fmt/RED"    (is (= fmt/RED    "\033[0;31m"))))
 
 (deftest echo-test
   (testing "potamic.fmt/echo"

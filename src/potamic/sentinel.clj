@@ -1,7 +1,7 @@
 (ns potamic.sentinel
   "Provides time-oriented \"watchers\" for Potamic queues."
   {:added "0.1"
-   :author "Chad Angelelli"}
+   :author "@yeajustmars"}
   (:require [clojure.core.async :as async]
             [potamic.db :as db]
             [potamic.errors :as e]
@@ -9,8 +9,7 @@
             [potamic.queue :as p]
             [potamic.sentinel.validation :as sv]
             [potamic.validation :as v]
-            [taoensso.timbre :as log])
-  (:gen-class))
+            [taoensso.timbre :as log]))
 
 (def ^{:private true} STQ-LABEL (str "[" GREEN "potamic.sentinel" NC "]"))
 

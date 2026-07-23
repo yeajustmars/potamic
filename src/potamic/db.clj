@@ -1,21 +1,34 @@
 (ns potamic.db
-  "Redis-compatible DB functionality."
-  (:require [potamic.connection :as conn]
+  "Key-value store functionality."
+  (:require [potamic.connection :as conn :refer [pcar]]
             [potamic.db.validation :as dbv]
             [potamic.errors :as e]
             [potamic.util :as pu]
             [potamic.validation :as v]
-            [taoensso.carmine :as car :refer [wcar]])
-  (:gen-class))
+            [taoensso.carmine :as car :refer [wcar]]
+            [taoensso.timbre :as log]))
 
 (defn- -make-redis-conn
-  [uri pool]
-  {:pool pool
-   :spec {:backend :redis :uri uri}})
+  "Makes a standard Redis connection usable by Carmine."
+  [uri pool skip-checks?]
+  (let [conn {:pool pool :spec {:backend :redis :uri uri}}]
+    (if skip-checks?
+      conn
+      (try
+        (wcar conn (car/ping))
+        conn
+        (catch Exception e
+          (let [err (e/error {:potamic/err-type :potamic/db-err
+                              :potamic/err-fatal? true
+                              :potamic/err-data {::err (Throwable->map e)}
+                              :potamic/err-msg (str "Can't make Redis connection: "
+                                                    (.getMessage e))})]
+            (log/error err)
+            (throw e)))))))
 
-(def ^:private kvrocks-namespaces_
+(def kvrocks-namespaces_
   "Just keeps track of created Kvrocks Namespaces for side-effect purposes.
-  When `make-conn` is called, Kvrocks backend will be synced with a new namespace
+  When `make-conn` is called for `:kvrocks` backend, a new namespace is created
   if it doesn't already exist. This tracks what's already been created."
   (atom #{}))
 
@@ -29,18 +42,37 @@
   See also:
 
   - `potamic.connection/pcar`"
-  [uri pool]
+  [uri pool skip-checks?]
   (let [uri-obj (pu/parse-redis-uri uri)
         spec (-> (select-keys uri-obj [:host :port :password :db])
                  (assoc :backend :kvrocks))
         conn {:pool pool
-              :spec spec}
-        db (:db spec)]
-    (when-not (contains? @kvrocks-namespaces_ db)
-      (wcar conn
-            (car/auth (:password spec))
-            (car/redis-call ["NAMESPACE" "ADD" db db]))
-      (swap! kvrocks-namespaces_ conj db))
+              :spec spec}]
+    (if skip-checks?
+      conn
+      (let [db (:db spec)
+            pw (:password spec)
+            ns-cmd ["NAMESPACE" "ADD" db db]]
+        (when-not (contains? @kvrocks-namespaces_ db)
+          (try
+            (if (seq pw)
+              (wcar conn
+                    (car/auth (:password spec))
+                    (car/redis-call ns-cmd))
+              (wcar conn
+                    :as-pipeline
+                    (car/redis-call ns-cmd)))
+            (swap! kvrocks-namespaces_ conj db)
+            conn
+            (catch Exception e
+              (let [err (e/error {:potamic/err-type :potamic/db-err
+                                  :potamic/err-fatal? true
+                                  :potamic/err-msg (str "Can't make Kvrocks connection: "
+                                                        "Can't connect or create Kvrocks "
+                                                        "namespace: " (.getMessage e))
+                                  :potamic/err-data {::err (Throwable->map e)}})]
+                (log/error err)
+                (throw e)))))))
     conn))
 
 (defn make-conn
@@ -58,19 +90,18 @@
   ;=  {:uri \"redis://localhost:6379/0\"}
   ;=   :pool #taoensso.carmine.connections.ConnectionPool[..]}
   ```"
-  [& opts]
-  (let [{:keys [backend uri pool] :as args} (apply hash-map opts)]
-    (if-let [args-err (v/invalidate dbv/ConnArgs args)]
-      (let [err (e/error {:potamic/err-type :potamic/args-err
-                          :potamic/err-fatal? true
-                          :potamic/err-msg (str "Invalid args provided to "
-                                                "potamic.db/make-conn")
-                          :potamic/err-data {:args args :err args-err}})]
-        (e/throw-potamic-error err))
-      (let [pool (or pool (conn/make-connection-pool))]
-        (case backend
-          :kvrocks (-make-kvrocks-conn uri pool)
-          (-make-redis-conn uri pool))))))
+  [& {:keys [backend uri ?pool skip-checks?] :as args}]
+  (if-let [args-err (v/invalidate dbv/MakeConnArgs args)]
+    (let [err (e/error {:potamic/err-type :potamic/args-err
+                        :potamic/err-fatal? true
+                        :potamic/err-msg (str "Invalid args provided to "
+                                              "potamic.db/make-conn")
+                        :potamic/err-data {:args args :err args-err}})]
+      (e/throw-potamic-error err))
+    (let [pool (or ?pool (conn/make-connection-pool))]
+      (case backend
+        :kvrocks (-make-kvrocks-conn uri pool skip-checks?)
+        (-make-redis-conn uri pool skip-checks?)))))
 
 (defn key-exists?
   "Returns boolean after checking if key exists in DB.
@@ -93,4 +124,4 @@
   ;= true
   ```"
   [k conn]
-(> (wcar conn (car/exists (pu/->str k))) 0))
+  (> (pcar conn (car/exists (pu/->str k))) 0))

@@ -1,7 +1,6 @@
 (ns potamic.fmt
   (:require [clojure.string :as string]
-            [clojure.pprint :refer [pprint]])
-  (:gen-class))
+            [clojure.pprint :refer [pprint]]))
 
 (def LOGO
 "

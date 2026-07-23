@@ -1,7 +1,7 @@
 (ns potamic.sentinel.validation
   "Validation for `st.queue` library."
   {:added "5.0"
-   :author "Chad Angelelli"}
+   :author "@yeajustmars"}
   (:require [malli.core :as malli]
             [potamic.queue.validation :refer [QueueValue]]
             [potamic.db.validation :refer [Conn]]

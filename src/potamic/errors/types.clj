@@ -1,5 +1,4 @@
-(ns potamic.errors.types
-  (:gen-class))
+(ns potamic.errors.types)
 
 (def error-types
   "Potamic Error types.

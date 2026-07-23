@@ -1,7 +1,7 @@
 (ns potamic.validation-test
   (:require [clojure.test :refer [deftest is testing]]
             [potamic.validation :as v]
-            [potamic.test-data :as td]))
+            [potamic.test-util :as tu]))
 
 (deftest f-test
   (testing "potamic.validation/f"
@@ -28,5 +28,5 @@
 
 (deftest valid-redis-uri?-test
   (testing "potamic.validation/valid-redis-uri?"
-    (doseq [uri td/valid-redis-uris]
+    (doseq [uri tu/valid-redis-uris]
       (is (v/valid-redis-uri? uri)))))

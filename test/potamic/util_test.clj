@@ -1,6 +1,6 @@
 (ns potamic.util-test
   (:require [clojure.test :refer [deftest is testing]]
-            [potamic.test-data :as td]
+            [potamic.test-util :as tu]
             [potamic.util :as util]))
 
 (deftest ->str-test
@@ -53,5 +53,5 @@
 
 (deftest parse-redis-uri
   (testing "potamic.util/parse-redis-uri"
-    (doseq [[in out] td/valid-uri-parse-mappings]
+    (doseq [[in out] tu/valid-uri-parse-mappings]
       (is (= out (util/parse-redis-uri in))))))

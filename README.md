@@ -82,4 +82,4 @@ bin/doc
 
 Distributed under the [EPL v1.0](https://raw.githubusercontent.com/yeajustmars/potamic/main/LICENSE) (same as Clojure).
 
-Copyright © 2023 Chad Angelelli
+Copyright © 2023 @yeajustmars

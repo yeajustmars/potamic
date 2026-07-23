@@ -1,7 +1,7 @@
 (ns potamic.queue
   "Implements a stream-based message queue over Redis (or KeyDB)."
   {:added "0.1"
-   :author "Chad Angelelli"}
+   :author "@yeajustmars"}
   (:refer-clojure :exclude [read])
   (:require [clojure.walk :as walk]
             [potamic.db :as db]
@@ -10,8 +10,7 @@
             [potamic.queue.validation :as qv]
             [potamic.util :as util]
             [potamic.validation :as v]
-            [taoensso.carmine :as car :refer [wcar]])
-  (:gen-class))
+            [taoensso.carmine :as car :refer [wcar]]))
 
 (defn get-queue
   "Returns queue spec for `queue-name`.
