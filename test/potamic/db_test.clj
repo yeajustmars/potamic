@@ -34,19 +34,26 @@
     (testing "| Redis"
       (testing "potamic.db/make-conn | Redis standalone (default, no explicit backend) | :skip-checks? true"
         (-test-redis-conns tu/valid-redis-uris :skip-checks? true))
+
       (testing "potamic.db/make-conn | Redis standalone (default, no explicit backend) | :skip-checks? false"
         (-test-redis-conns tu/testable-redis-uris))
+
       (testing "potamic.db/make-conn | Redis standalone (explicit backend) | :skip-checks? true"
         (-test-redis-conns tu/valid-redis-uris :backend :redis :skip-checks? true))
+
       (testing "potamic.db/make-conn | Redis standalone (explicit backend) | :skip-checks? false"
         (-test-redis-conns tu/valid-redis-uris :backend :redis :skip-checks? true)))
+
     (testing "| Kvrocks"
       (testing "potamic.db/make-conn | Kvrocks standalone | :skip-checks? true"
         (-test-kvrocks-conns tu/valid-kvrocks-standalone-uris :backend :kvrocks :skip-checks? true))
+
       (testing "potamic.db/make-conn | Kvrocks standalone | :skip-checks? false"
         (-test-kvrocks-conns tu/valid-kvrocks-standalone-uris :backend :kvrocks :skip-checks? true))
+
       (testing "potamic.db/make-conn | Kvrocks cluster | :skip-checks? true"
         (-test-kvrocks-conns tu/valid-kvrocks-cluster-uris :backend :kvrocks :skip-checks? true))
+
       (testing "potamic.db/make-conn | Kvrocks cluster | :skip-checks? false"
         (-test-kvrocks-conns tu/valid-kvrocks-cluster-uris :backend :kvrocks :skip-checks? true)))))
 
@@ -59,12 +66,14 @@
               exists-after? (db/key-exists? random-key tu/conn-redis-standalone)]
           (is (false? exists-before?))
           (is (true? exists-after?))))
+
       (testing "potamic.db/key-exists? | Kvrocks standalone"
         (let [exists-before? (db/key-exists? random-key tu/conn-kvrocks-standalone)
               _ (-set-x-to-one tu/conn-kvrocks-standalone)
               exists-after? (db/key-exists? random-key tu/conn-kvrocks-standalone)]
           (is (false? exists-before?))
           (is (true? exists-after?))))
+
       (testing "potamic.db/key-exists? | Kvrocks cluster"
         (let [exists-before? (db/key-exists? random-key tu/conn-kvrocks-cluster)
               _ (-set-x-to-one tu/conn-kvrocks-cluster)
