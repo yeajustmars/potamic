@@ -81,27 +81,32 @@
 
 (def id-pat #"\d+-\d+")
 
+(defn destroy-redis-standalone []
+  (q/destroy-queue! test-queue conn-redis-standalone :unsafe true)
+  (pcar conn-redis-standalone (car/flushall)))
+
+(defn destroy-kvrocks-standalone []
+  (q/destroy-queue! test-queue conn-kvrocks-standalone :unsafe true)
+  (pcar conn-kvrocks-standalone (car/flushall)))
+
+(defn destroy-kvrocks-cluster []
+  (q/destroy-queue! test-queue conn-kvrocks-cluster :unsafe true)
+  (pcar conn-kvrocks-cluster (car/flushall)))
+
+(defn create-test-queue [conn]
+  (q/create-queue! test-queue conn))
+
+(defn reset-queues []
+  (reset! queues_ nil))
+
 (defn fx-prime-db
   [f]
-  (letfn [(-destroy-redis-standalone []
-            (q/destroy-queue! test-queue conn-redis-standalone :unsafe true)
-            (pcar conn-redis-standalone (car/flushall)))
-          (-destroy-kvrocks-standalone []
-            (q/destroy-queue! test-queue conn-kvrocks-standalone :unsafe true)
-            (pcar conn-kvrocks-standalone (car/flushall)))
-          (-destroy-kvrocks-cluster []
-            (q/destroy-queue! test-queue conn-kvrocks-cluster :unsafe true)
-            (pcar conn-kvrocks-cluster (car/flushall)))
-          (-create-test-queue [conn]
-            (q/create-queue! test-queue conn))
-          (-reset-queues []
-            (reset! queues_ nil))]
-    (-destroy-redis-standalone)
-    (-destroy-kvrocks-standalone)
-    (-destroy-kvrocks-cluster)
-    (-reset-queues)
-    (-create-test-queue conn-redis-standalone)
-    (f)))
+  (destroy-redis-standalone)
+  (destroy-kvrocks-standalone)
+  (destroy-kvrocks-cluster)
+  (reset-queues)
+  (create-test-queue conn-redis-standalone)
+  (f))
 
 (defmacro pcar-redis-standalone
   [& body]
