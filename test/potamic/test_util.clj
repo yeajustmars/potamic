@@ -3,7 +3,7 @@
             [potamic.db :as db]
             [potamic.queue :as q]
             [potamic.queue.queues :as queues]
-            [taoensso.carmine :as car :refer [wcar]]))
+            [taoensso.carmine :as car]))
 
 (def valid-redis-uris
   ["redis://localhost:6379/0"

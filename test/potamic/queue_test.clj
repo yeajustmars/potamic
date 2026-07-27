@@ -2,7 +2,8 @@
   "Test `potamic.queue`."
   {:added "0.1"
    :author "@yeajustmars"}
-  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require [clojure.string :as string]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [clojure.walk :as walk]
             [clojure.core.async :as async]
             [taoensso.carmine :as car]
@@ -183,7 +184,7 @@
                   (testing "-- multi put"
                     (let [[?ids ?err] (q/put qname {:a 1} {:b 2} {:c 3})]
                       (is (nil? ?err))
-                      (is (= (count ?ids) 3))
+                      (is (= 3 (count ?ids)))
                       (is (every? identity (mapv #(re-find tu/id-pat %) ?ids))))))))]
       (testing "potamic.queue/create-queue! | Redis standalone"
         (-test-put :standalone tu/conn-redis-standalone))
@@ -217,7 +218,7 @@
                 (is (= read1-msgs read2-msgs))
                 (is (re-find tu/id-pat (:id (first read3-msgs))))
                 (is (= 1 (count read3-msgs)))
-                (is (= (:msg (first read3-msgs)) {:d 4}))))]
+                (is (= {:d 4} (:msg (first read3-msgs))))))]
       (testing "potamic.queue/create-queue! | Redis standalone"
         (-test-read :standalone tu/conn-redis-standalone))
       (testing "potamic.queue/test-queue! | Kvrocks standalone"
@@ -235,22 +236,22 @@
                 (is (nil? ?destroy-err))
                 (is (nil? ?err))
                 (is (nil? ?create-err))
-                (is (= (count ?ids) 3))
+                (is (= 3 (count ?ids)))
                 (is (every? identity (mapv #(re-find tu/id-pat %) ?ids)))
                 (testing "-- read-next! 1"
                   (let [[?msgs ?e] (q/read-next! 1 :from qname :as :my/consumer1)]
                     (is (nil? ?e))
                     (is (= 1 (count ?msgs)))
                     (is (re-find tu/id-pat (:id (first ?msgs))))
-                    (is (= (:msg (first ?msgs)) {:a 1}))))
+                    (is (= {:a 1} (:msg (first ?msgs))))))
                 (testing "-- read-next! :all"
                   (let [[?msgs ?e] (q/read-next! 2 :from qname :as :my/consumer1)]
                     (is (nil? ?e))
                     (is (= 2 (count ?msgs)))
                     (is (re-find tu/id-pat (:id (first ?msgs))))
                     (is (re-find tu/id-pat (:id (second ?msgs))))
-                    (is (= (:msg (first ?msgs)) {:b 2}))
-                    (is (= (:msg (second ?msgs)) {:c 3}))))))]
+                    (is (= {:b 2} (:msg (first ?msgs))))
+                    (is (= {:c 3} (:msg (second ?msgs))))))))]
       (testing "potamic.queue/create-queue! | Redis standalone"
         (-test-read-next! :standalone tu/conn-redis-standalone))
       (testing "potamic.queue/test-queue! | Kvrocks standalone"
@@ -258,35 +259,40 @@
       (testing "potamic.queue/test-queue! | Kvrocks cluster"
         (-test-read-next! :cluster tu/conn-kvrocks-cluster)))))
 
-#_(deftest test__read-pending
+(deftest test__read-pending
   (testing "potamic.queue/read-pending"
-    (let [[_ _] (q/put test-queue {:a 1} {:b 2} {:c 3})
-          [_ _] (q/read-next! 1 :from test-queue :as :consumer/one)
-          [read1 ?read1-err] (q/read-pending 10
-                                             :from test-queue
-                                             :for :consumer/one)
-          [read2 ?read2-err ] (q/read-pending 10
-                                              :from test-queue
-                                              :for :consumer/one
-                                              :start '-
-                                              :end '+)
-          [read3 ?read3-err] (q/read-pending 1
-                                             :from test-queue
-                                             :for :consumer/one
-                                             :start (:id (first read1))
-                                             :end  (:id (last read2)))]
-      (is (nil? ?read1-err))
-      (is (nil? ?read2-err))
-      (is (nil? ?read3-err))
-      (is (sequential? read1))
-      (is (sequential? read2))
-      (is (sequential? read3))
-      (is (= (count read1) 1))
-      (is (= (count read2) 1))
-      (is (= (count read3) 1))
-      (is (= (:id (first read1)) (:id (first read2))))
-      (is (= (:id (first read2)) (:id (first read3))))
-      (is (= (:id (first read1)) (:id (first read3)))))))
+    (letfn [(-test-read-pending [typ {{:keys [backend]} :spec :as conn}]
+              (let [qname (keyword (name backend) (str (name typ) "-read-pending-test"))
+                    [_ ?destroy-err] (q/destroy-queue! qname conn :unsafe true)
+                    [_ ?create-err] (q/create-queue! qname conn :group :consumer/one)
+                    [_ _] (q/put qname {:a 1} {:b 2} {:c 3})
+                    [_ _] (q/read-next! 3 :from qname :as :consumer/one)
+                    [read1 ?read1-err] (q/read-pending 10 :from qname :for :consumer/one :start '- :end '+)
+                    [read2 ?read2-err] (q/read-pending 5 :from qname :for :consumer/one :start '- :end '+)
+                    read1-vec (into [] read1)
+                    read2-vec (into [] read2)]
+                (is (nil? ?destroy-err))
+                (is (nil? ?create-err))
+                (is (nil? ?read1-err))
+                (is (nil? ?read2-err))
+                (is (sequential? read1))
+                (is (sequential? read2))
+                (is (= 3 (count read1)))
+                (is (= 3 (count read2)))
+                (is (= '(1 1 1) (map :times-delivered read1)))
+                (is (= '(1 1 1) (map :times-delivered read2)))
+                (is (string/ends-with? (get-in read1-vec [0 :id]) "-0"))
+                (is (string/ends-with? (get-in read1-vec [1 :id]) "-1"))
+                (is (string/ends-with? (get-in read1-vec [2 :id]) "-2"))
+                (is (string/ends-with? (get-in read2-vec [0 :id]) "-0"))
+                (is (string/ends-with? (get-in read2-vec [1 :id]) "-1"))
+                (is (string/ends-with? (get-in read2-vec [2 :id]) "-2"))))]
+      (testing "potamic.queue/create-queue! | Redis standalone"
+        (-test-read-pending :standalone tu/conn-redis-standalone))
+      (testing "potamic.queue/test-queue! | Kvrocks standalone"
+        (-test-read-pending :standalone tu/conn-kvrocks-standalone))
+      (testing "potamic.queue/test-queue! | Kvrocks cluster"
+        (-test-read-pending :cluster tu/conn-kvrocks-cluster)))))
 
 #_(deftest test__read-pending-summary
   (testing "potamic.queue/read-pending-summary"

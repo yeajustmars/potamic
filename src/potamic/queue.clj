@@ -616,8 +616,7 @@
 
 (defn read-pending
   "Lists details of pending messages for a `queue`/`group` pair. Optionally,
-  a `consumer` may be provided for sub-filtering.
-  Returns vector of `[?details ?err]`.
+  a `consumer` may be provided for sub-filtering. Returns vector of `[?details ?err]`.
 
   `?details` is of the form:
 
