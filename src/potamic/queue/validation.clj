@@ -21,7 +21,7 @@
     [:map {:closed true}
      [:queue-name [:and QueueValue]]
      [:conn dbv/Conn]
-     [:unsafe {:optional true} boolean?]]))
+     [:unsafe {:optional true} [:maybe :boolean]]]))
 
 (def ReadPendingArgs
   (malli/schema

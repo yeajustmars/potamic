@@ -110,7 +110,7 @@
 
   - `potamic.queue/get-queue`
   - `potamic.queue/create-queue!`
-  - `potamic.queue/delete-queue`"
+  - `potamic.queue/destroy-queue!`"
   ([] @queues/queues_)
   ([x]
    (cond
@@ -127,7 +127,17 @@
   [queue-name]
   (keyword (str (subs (str queue-name) 1) "-group")))
 
+(defn- -check-group-exists
+  [^Exception e]
+  (let [msg (.getMessage e)]
+    (if (re-find #"(?i)consumer.+group.+?already\s+exists" msg)
+      [:group-exists nil]
+      [nil (util/make-exception e)])))
+
 (defn- -initialize-stream
+  "Note: it seems sometimes we get error-as-value (ret) and other times this throws.
+  This is why we call -check-group-exists in both cases. If ret is an error, it is of
+  type clojure.lang.ExceptionInfo."
   [conn queue-name group-name init-id]
   (try
     (let [ret (pcar conn
@@ -136,13 +146,11 @@
                       (util/->str group-name)
                       init-id
                       :mkstream))]
-      [(and (= "OK" ret) :group-created)
-       nil])
+      (if (= "OK" ret)
+        [:group-created nil]
+        (-check-group-exists ret)))
     (catch Exception e
-      (let [msg (.getMessage e)]
-        (if (re-find #"Consumer\s+Group.+?already\s+exists" msg)
-          [:group-exists nil]
-          [nil (util/make-exception e)])))))
+      (-check-group-exists e))))
 
 (defn create-queue!
   "Creates (or resets) a queue spec and, if it doesn't exist, optionally
@@ -213,15 +221,15 @@
                       :group-name group-name
                       :redis-queue-name (util/->str queue-name)
                       :redis-group-name (util/->str group-name)}]
-        (swap! queues/queues_ assoc queue-name spec)
-        [(if spec-exists?
-           (case stream-status
-             :group-created :updated-with-new-stream
-             :group-exists :updated-with-existing-stream)
-           (case stream-status
-             :group-created :created-with-new-stream
-             :group-exists :created-with-existing-stream ))
-         nil]))))))
+            (swap! queues/queues_ assoc queue-name spec)
+            [(if spec-exists?
+               (case stream-status
+                 :group-created :updated-with-new-stream
+                 :group-exists :updated-with-existing-stream)
+               (case stream-status
+                 :group-created :created-with-new-stream
+                 :group-exists :created-with-existing-stream))
+             nil]))))))
 
 ;;TODO: add input validation for ID/MSG pairs and/or wildcar IDs for multi
 (defn put
@@ -375,7 +383,6 @@
                   [(when cnt [:count cnt])
                    (when block [:block (util/time->milliseconds block)])
                    [:streams qname start]])
-            _ (println "\t|> RAW: " (-> (pcar conn (apply car/xread cmd))))
             res (-> (pcar conn (apply car/xread cmd))
                     first
                     second
