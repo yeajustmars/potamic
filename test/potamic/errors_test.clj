@@ -3,14 +3,14 @@
             [potamic.errors :as e]
             [potamic.errors.types :as et]))
 
-(deftest error-types-test
+(deftest test__error-types
   (testing "potamic.errors/error-types"
-    (is (= et/error-types
-           #{:potamic/args-err
+    (is (= #{:potamic/args-err
              :potamic/db-err
-             :potamic/internal-err}))))
+             :potamic/internal-err}
+           et/error-types))))
 
-(deftest error-test
+(deftest test__error
   (testing "potamic.errors/error"
     (let [{:keys [potamic/err-file
                   potamic/err-line
@@ -26,7 +26,7 @@
       (is (int? err-column))
       (is (not= err-line 0))
       (is (not= err-column 0))
-      (is (= err-file "potamic/errors_test.clj"))
-      (is (= err-data {:a 1 :b 2}))
-      (is (= err-msg "ERROR MSG"))
-      (is (= err-type :potamic/args-err)))))
+      (is (= "potamic/errors_test.clj" err-file))
+      (is (= {:a 1 :b 2} err-data))
+      (is (= "ERROR MSG" err-msg))
+      (is (= :potamic/args-err err-type)))))

@@ -90,7 +90,7 @@
   ;=  {:uri \"redis://localhost:6379/0\"}
   ;=   :pool #taoensso.carmine.connections.ConnectionPool[..]}
   ```"
-  [& {:keys [backend uri ?pool skip-checks?] :as args}]
+  [& {:keys [backend uri pool skip-checks?] :as args}]
   (if-let [args-err (v/invalidate dbv/MakeConnArgs args)]
     (let [err (e/error {:potamic/err-type :potamic/args-err
                         :potamic/err-fatal? true
@@ -98,7 +98,7 @@
                                               "potamic.db/make-conn")
                         :potamic/err-data {:args args :err args-err}})]
       (e/throw-potamic-error err))
-    (let [pool (or ?pool (conn/make-connection-pool))]
+    (let [pool (or pool (conn/make-connection-pool))]
       (case backend
         :kvrocks (-make-kvrocks-conn uri pool skip-checks?)
         (-make-redis-conn uri pool skip-checks?)))))

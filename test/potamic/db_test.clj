@@ -11,7 +11,7 @@
                 tu/fx-make-conns
                 tu/fx-prime-db)
 
-(deftest test-make-conn
+(deftest test__make-conn
   (letfn [(-test-redis-conns [uris & {:keys [backend skip-checks?]}]
             (doseq [uri uris]
               (let [?conn (if backend
@@ -20,10 +20,10 @@
                 (is (= {:spec {:uri uri :backend :redis}
                         :pool :__REPLACED__}
                        (assoc ?conn :pool :__REPLACED__))))))
-          (-test-kvrocks-conns [uris & {:keys [skip-checks?]}]
+          (-test-kvrocks-uri-conns [uris & {:keys [skip-checks?]}]
             (doseq [uri uris]
               (let [?conn (db/make-conn {:backend :kvrocks :uri uri :skip-checks? skip-checks?})
-              {:keys [host port password db]} (util/parse-redis-uri uri)]
+                    {:keys [host port password db]} (util/parse-redis-uri uri)]
                 (is (= {:spec {:backend :kvrocks
                                :host host
                                :port port
@@ -31,7 +31,7 @@
                                :db db}
                         :pool :__REPLACED__}
                        (assoc ?conn :pool :__REPLACED__))))))]
-    (testing "| Redis"
+    (testing "|> Redis"
       (testing "potamic.db/make-conn | Redis standalone (default, no explicit backend) | :skip-checks? true"
         (-test-redis-conns tu/valid-redis-uris :skip-checks? true))
 
@@ -42,22 +42,22 @@
         (-test-redis-conns tu/valid-redis-uris :backend :redis :skip-checks? true))
 
       (testing "potamic.db/make-conn | Redis standalone (explicit backend) | :skip-checks? false"
-        (-test-redis-conns tu/valid-redis-uris :backend :redis :skip-checks? true)))
+        (-test-redis-conns tu/testable-redis-uris :backend :redis :skip-checks? false)))
 
-    (testing "| Kvrocks"
+    (testing "|> Kvrocks"
       (testing "potamic.db/make-conn | Kvrocks standalone | :skip-checks? true"
-        (-test-kvrocks-conns tu/valid-kvrocks-standalone-uris :backend :kvrocks :skip-checks? true))
+        (-test-kvrocks-uri-conns tu/valid-kvrocks-standalone-uris :backend :kvrocks :skip-checks? true))
 
       (testing "potamic.db/make-conn | Kvrocks standalone | :skip-checks? false"
-        (-test-kvrocks-conns tu/valid-kvrocks-standalone-uris :backend :kvrocks :skip-checks? true))
+        (-test-kvrocks-uri-conns tu/testable-kvrocks-standalone-uris :backend :kvrocks :skip-checks? false))
 
       (testing "potamic.db/make-conn | Kvrocks cluster | :skip-checks? true"
-        (-test-kvrocks-conns tu/valid-kvrocks-cluster-uris :backend :kvrocks :skip-checks? true))
+        (-test-kvrocks-uri-conns tu/valid-kvrocks-cluster-uris :backend :kvrocks :skip-checks? true))
 
       (testing "potamic.db/make-conn | Kvrocks cluster | :skip-checks? false"
-        (-test-kvrocks-conns tu/valid-kvrocks-cluster-uris :backend :kvrocks :skip-checks? true)))))
+        (-test-kvrocks-uri-conns tu/testable-kvrocks-cluster-uris :backend :kvrocks :skip-checks? false)))))
 
-(deftest test-key-exists?
+(deftest test__key-exists?
   (let [random-key (str (UUID/randomUUID))]
     (letfn [(-set-x-to-one [conn] (pcar conn (car/set random-key 1)))]
       (testing "potamic.db/key-exists? | Redis standalone"

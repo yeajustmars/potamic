@@ -2,8 +2,8 @@
   (:require [potamic.connection :refer [pcar]]
             [potamic.db :as db]
             [potamic.queue :as q]
-            [potamic.queue.queues :refer [queues_]]
-            [taoensso.carmine :as car]))
+            [potamic.queue.queues :as queues]
+            [taoensso.carmine :as car :refer [wcar]]))
 
 (def valid-redis-uris
   ["redis://localhost:6379/0"
@@ -53,7 +53,7 @@
    {:scheme "redis" :host "localhost" :user nil :password nil :port 6379 :db 0}
 
   "redis://USER:PASS@localhost:1234"
-  {:scheme "redis" :host "localhost" :user "USER" :password "PASS" :port 1234 :db nil}
+  {:scheme "redis" :host "localhost" :user "USER" :password "PASS" :port 1234 :db 0}
 
   "redis://scooby:doo@123.124.125.126:6666/1"
   {:scheme "redis" :host "123.124.125.126" :user "scooby" :password "doo" :port 6666 :db 1}})
@@ -66,46 +66,59 @@
          conn-kvrocks-standalone
          conn-kvrocks-cluster)
 
-(defn fx-make-conns
-  [f]
+(defn make-conns
+  []
   (alter-var-root #'conn-redis-standalone
                   (constantly (db/make-conn :uri uri-redis-standalone)))
   (alter-var-root #'conn-kvrocks-standalone
                   (constantly (db/make-conn :backend :kvrocks :uri uri-kvrocks-standalone)))
   (alter-var-root #'conn-kvrocks-cluster
-                  (constantly (db/make-conn :backend :kvrocks :uri uri-kvrocks-cluster)))
+                  (constantly (db/make-conn :backend :kvrocks :uri uri-kvrocks-cluster))))
+
+(defn fx-make-conns
+  [f]
+  (make-conns)
   (f))
 
 (def test-queue :my/test-queue)
 (def test-queue-group :my/test-queue-group)
 
+
+(def secondary-queue :secondary/queue)
+(def secondary-queue-group :second/group),
+
 (def id-pat #"\d+-\d+")
 
 (defn destroy-redis-standalone []
   (q/destroy-queue! test-queue conn-redis-standalone :unsafe true)
+  (q/destroy-queue! :secondary/queue conn-redis-standalone :unsafe true)
   (pcar conn-redis-standalone (car/flushall)))
 
 (defn destroy-kvrocks-standalone []
   (q/destroy-queue! test-queue conn-kvrocks-standalone :unsafe true)
+  (q/destroy-queue! :secondary/queue conn-kvrocks-standalone :unsafe true)
   (pcar conn-kvrocks-standalone (car/flushall)))
 
 (defn destroy-kvrocks-cluster []
   (q/destroy-queue! test-queue conn-kvrocks-cluster :unsafe true)
+  (q/destroy-queue! :secondary/queue conn-kvrocks-cluster :unsafe true)
   (pcar conn-kvrocks-cluster (car/flushall)))
 
 (defn create-test-queue [conn]
   (q/create-queue! test-queue conn))
 
-(defn reset-queues []
-  (reset! queues_ nil))
+(defn reset-queues! []
+  (reset! queues/queues_ {}))
 
 (defn fx-prime-db
   [f]
   (destroy-redis-standalone)
   (destroy-kvrocks-standalone)
   (destroy-kvrocks-cluster)
-  (reset-queues)
+  (reset-queues!)
   (create-test-queue conn-redis-standalone)
+  (create-test-queue conn-kvrocks-standalone)
+  (create-test-queue conn-kvrocks-cluster)
   (f))
 
 (defmacro pcar-redis-standalone

@@ -4,13 +4,14 @@
    :author "@yeajustmars"}
   (:refer-clojure :exclude [read])
   (:require [clojure.walk :as walk]
+            [potamic.connection :refer [pcar]]
             [potamic.db :as db]
             [potamic.errors :as e]
             [potamic.queue.queues :as queues]
             [potamic.queue.validation :as qv]
             [potamic.util :as util]
             [potamic.validation :as v]
-            [taoensso.carmine :as car :refer [wcar]]))
+            [taoensso.carmine :as car]))
 
 (defn get-queue
   "Returns queue spec for `queue-name`.
@@ -129,15 +130,14 @@
 (defn- -initialize-stream
   [conn queue-name group-name init-id]
   (try
-    [(and (= "OK"
-             (wcar conn
-                   (car/xgroup-create
-                     (util/->str queue-name)
-                     (util/->str group-name)
-                     init-id
-                     :mkstream)))
-          :group-created)
-     nil]
+    (let [ret (pcar conn
+                    (car/xgroup-create
+                      (util/->str queue-name)
+                      (util/->str group-name)
+                      init-id
+                      :mkstream))]
+      [(and (= "OK" ret) :group-created)
+       nil])
     (catch Exception e
       (let [msg (.getMessage e)]
         (if (re-find #"Consumer\s+Group.+?already\s+exists" msg)
@@ -191,10 +191,9 @@
   See also:
 
   - `potamic.queue/destroy-queue!`"
-  [queue-name conn & opts]
-  (let [opts* (apply hash-map opts)
-        group-name (or (:group opts*) (-set-default-group-name queue-name))
-        init-id (or (:init-id opts*) 0)
+  [queue-name conn & {:keys [group init-id]}]
+  (let [group-name (or group (-set-default-group-name queue-name))
+        init-id (or init-id 0)
         args {:conn conn
               :queue-name queue-name
               :init-id init-id
@@ -202,22 +201,18 @@
     (if-let [args-err (v/invalidate qv/CreateQueueArgs args)]
       [nil (e/error {:potamic/err-type :potamic/args-err
                      :potamic/err-fatal? false
-                     :potamic/err-msg (str "Invalid args provided to "
-                                           "potamic.queue/create-queue!")
+                     :potamic/err-msg "Invalid args provided to potamic.queue/create-queue!"
                      :potamic/err-data {:args (util/remove-conn args)
                                         :err args-err}})]
-      (let [[stream-status ?err] (-initialize-stream conn
-                                                     queue-name
-                                                     group-name
-                                                     init-id)]
+      (let [[stream-status ?err] (-initialize-stream conn queue-name group-name init-id)]
         (if ?err
           [nil ?err]
           (let [spec-exists? (boolean (get-queue queue-name))
                 spec {:queue-name queue-name
-                       :queue-conn conn
-                       :group-name group-name
-                       :redis-queue-name (util/->str queue-name)
-                       :redis-group-name (util/->str group-name)}]
+                      :queue-conn conn
+                      :group-name group-name
+                      :redis-queue-name (util/->str queue-name)
+                      :redis-group-name (util/->str group-name)}]
         (swap! queues/queues_ assoc queue-name spec)
         [(if spec-exists?
            (case stream-status
@@ -274,7 +269,7 @@
         msgs (map util/encode-map-vals
                   (if id-set? (rest xs) xs))]
     (try
-      (let [[?err :as r] (wcar conn
+      (let [[?err :as r] (pcar conn
                                :as-pipeline
                                (mapv #(apply car/xadd qname id (reduce into [] %))
                                      msgs))]
@@ -380,7 +375,7 @@
                   [(when cnt [:count cnt])
                    (when block [:block (util/time->milliseconds block)])
                    [:streams qname start]])
-            res (-> (wcar conn (apply car/xread cmd))
+            res (-> (pcar conn (apply car/xread cmd))
                     first
                     second
                     -make-read-result)]
@@ -441,12 +436,10 @@
   - `potamic.queue/read`
   - `potamic.queue/read-next!`
   - `potamic.queue/put`"
-  [queue-name & opts]
-  (let [opts* (apply hash-map opts)
-        start (or (:start opts*) "-")
-        end (or (:end opts*) "+")
-        cnt (:count opts*)
-        args (assoc opts*
+  [queue-name & {:keys [start end] cnt :count :as opts}]
+  (let [start (or start "-")
+        end (or end "+")
+        args (assoc opts
                     :queue-name queue-name
                     :start start
                     :end end
@@ -455,14 +448,13 @@
       [nil
        (e/error {:potamic/err-type :potamic/args-err
                  :potamic/err-fatal? false
-                 :potamic/err-msg (str "Invalid args provided to "
-                                       "potamic.queue/read-range")
+                 :potamic/err-msg "Invalid args provided to potamic.queue/read-range"
                  :potamic/err-data {:args args :err args-err}})]
       (let [{qname :redis-queue-name conn :queue-conn} (get-queue queue-name)]
         (try
           (let [cmd (util/prep-cmd [[qname start end]
                                     (when cnt [:count cnt])])
-                res (-> (wcar conn (apply car/xrange cmd))
+                res (-> (pcar conn (apply car/xrange cmd))
                         -make-read-result)]
             [(seq res) nil])
           (catch Exception e
@@ -526,7 +518,7 @@
                    (when block [:block (util/time->milliseconds block)])
                    (when (not= consume :all) [:count consume])
                    [:streams qname ">"]])
-            res (-> (wcar conn (apply car/xreadgroup cmd))
+            res (-> (pcar conn (apply car/xreadgroup cmd))
                     first
                     second
                     -make-read-result)]
@@ -605,7 +597,7 @@
          conn :queue-conn} (get-queue queue-name)]
     (try
       (let [cmd (util/prep-cmd [[qname group]])
-            res (-> (wcar conn (apply car/xpending cmd))
+            res (-> (pcar conn (apply car/xpending cmd))
                     -make-pending-summary)]
         [res nil])
       (catch Exception e
@@ -693,13 +685,10 @@
 
   - `potamic.queue/read-pending-summary`
   - `potamic.queue/set-processed!`"
-  [count* & opts]
-  (let [opts* (apply hash-map opts)
-        from (:from opts*)
-        start (or (:start opts*) "-")
-        end (or (:end opts*) "+")
-        consumer (:for opts*)
-        args (assoc opts*
+  [count* & {:keys [from start end] consumer :for :as opts}]
+  (let [start (or start "-")
+        end (or end "+")
+        args (assoc opts
                     :from from
                     :for consumer
                     :start start
@@ -709,8 +698,7 @@
       [nil
        (e/error {:potamic/err-type :potamic/args-err
                  :potamic/err-fatal? false
-                 :potamic/err-msg (str "Invalid args provided to "
-                                       "potamic.queue/read-pending")
+                 :potamic/err-msg "Invalid args provided to potamic.queue/read-pending"
                  :potamic/err-data {:args args :err args-err}})]
       (let [{qname :redis-queue-name
              group :redis-group-name
@@ -718,7 +706,7 @@
         (try
           (let [cmd (util/prep-cmd [[qname group start end count*]
                                     (when consumer consumer)])
-                res (-> (wcar conn (apply car/xpending cmd))
+                res (-> (pcar conn (apply car/xpending cmd))
                         -make-pending-result)]
             [(lazy-seq res) nil])
           (catch Exception e
@@ -776,7 +764,7 @@
          conn :queue-conn} (get-queue queue-name)]
     (try
       (let [cmd (util/prep-cmd [(into [qname group] msg-ids)])
-            n-acked (wcar conn (apply car/xack cmd))]
+            n-acked (pcar conn (apply car/xack cmd))]
         [n-acked nil])
       (catch Exception e
         [nil (util/make-exception e)]))))
@@ -847,15 +835,12 @@
   See also:
 
   - `potamic.queue/create-queue!`"
-  [queue-name conn & opts]
-  (let [opts* (apply hash-map opts)
-        unsafe? (boolean (:unsafe opts*))
-        args {:conn conn :queue-name queue-name :unsafe unsafe?}]
+  [queue-name conn & {:keys [unsafe]}]
+  (let [args {:conn conn :queue-name queue-name :unsafe unsafe}]
     (if-let [args-err (v/invalidate qv/DestroyQueueArgs args)]
       [nil (e/error {:potamic/err-type :potamic/args-err
                      :potamic/err-fatal? false
-                     :potamic/err-msg (str "Invalid args provided to "
-                                           "potamic.queue/destroy-queue")
+                     :potamic/err-msg "Invalid args provided to potamic.queue/destroy-queue"
                      :potamic/err-data {:args (util/remove-conn args)
                                         :err args-err}})]
       (let [spec (get-queue queue-name)
@@ -868,19 +853,19 @@
               [:spec-destroyed_stream-nonexistent nil]
               [:spec-nonexistent_stream-nonexistent nil]))
           (let [groups (mapv #(walk/keywordize-keys (apply hash-map %))
-                             (wcar conn (car/xinfo-groups qname-str)))
+                             (pcar conn (car/xinfo-groups qname-str)))
                 has-pending? (pos-int? (apply max (map :pending groups)))]
-            (if (and (not unsafe?) has-pending?)
+            (if (and (not unsafe) has-pending?)
               [nil
-               (e/error {:potamic/err-type :potamic/db-err
-                         :potamic/err-fatal? false
-                         :potamic/err-msg (str "Cannot destroy " queue-name
-                                               ", it has pending messages")
-                         :potamic/err-data {:args (util/remove-conn args)
-                                            :groups groups}})]
+               (e/error
+                 {:potamic/err-type :potamic/db-err
+                  :potamic/err-fatal? false
+                  :potamic/err-msg (str "Cannot destroy " queue-name ", it has pending messages")
+                  :potamic/err-data {:args (util/remove-conn args)
+                                     :groups groups}})]
               (try
                 (swap! queues/queues_ dissoc queue-name)
-                (wcar conn
+                (pcar conn
                       :as-pipeline
                       (-> (mapv #(car/xgroup-destroy qname-str %) groups)
                           (into (car/del qname-str))))

@@ -3,7 +3,7 @@
             [potamic.test-util :as tu]
             [potamic.util :as util]))
 
-(deftest ->str-test
+(deftest test__->str
   (testing "potamic.util/->str"
     (let [should-pass {:my/queue "my/queue"
                        'my/queue "my/queue"
@@ -15,43 +15,42 @@
                        'a.b/c.d "a.b/c.d"
                        "a.b/c.d" "a.b/c.d"}]
       (doseq [[x check] should-pass]
-        (is (= (util/->str x) check))))))
+        (is (= check (util/->str x)))))))
 
-(deftest ->int-test
+(deftest test__->int
   (testing "potamic.util/->int"
     (is (= 1 (util/->int "1")))
     (is (= 66 (util/->int "66")))))
 
-(deftest <-str-test
+(deftest test__<-str
   (testing "potamic.util/<-str"
     (is (= :x/y (util/<-str "x/y")))
     (is (= "111" (util/<-str "111")))
     (is (= 111 (util/<-str 111)))))
 
-(deftest prep-cmd-test
+(deftest test__prep-cmd
   (testing "potamic.util/prep-cmd"
-    (is (= ["a" "b" "c"] (util/prep-cmd [[:a] ['b] ["c"]])))
-    (is (= ["a" "b" "c"] (util/prep-cmd [["a"] ['b] ["c"]])))
-    (is (= ["a" "b" "c" "d" "e" "f"]
-           (util/prep-cmd [[[['a]] 'b [[:c]] 'd] "e" "f"])))))
+    (is (= ["a" "b" "c"]             (util/prep-cmd [[:a] ['b] ["c"]])))
+    (is (= ["a" "b" "c"]             (util/prep-cmd [["a"] ['b] ["c"]])))
+    (is (= ["a" "b" "c" "d" "e" "f"] (util/prep-cmd [[[['a]] 'b [[:c]] 'd] "e" "f"])))))
 
-(deftest time->milliseconds-test
+(deftest test__time->milliseconds
   (testing "potamic.util/time->milliseconds"
-    (is (= (util/time->milliseconds [2 :milli]) 2))
-    (is (= (util/time->milliseconds [2 :millis]) 2))
-    (is (= (util/time->milliseconds [2 :second]) 2000))
-    (is (= (util/time->milliseconds [2 :seconds]) 2000))
-    (is (= (util/time->milliseconds [2 :minute]) 120000))
-    (is (= (util/time->milliseconds [2 :minutes]) 120000))
-    (is (= (util/time->milliseconds [2 :hour]) 7200000))
-    (is (= (util/time->milliseconds [2 :hours]) 7200000))))
+    (is (= 2       (util/time->milliseconds [2 :milli]   )))
+    (is (= 2       (util/time->milliseconds [2 :millis]  )))
+    (is (= 2000    (util/time->milliseconds [2 :second]  )))
+    (is (= 2000    (util/time->milliseconds [2 :seconds] )))
+    (is (= 120000  (util/time->milliseconds [2 :minute]  )))
+    (is (= 120000  (util/time->milliseconds [2 :minutes] )))
+    (is (= 7200000 (util/time->milliseconds [2 :hour]    )))
+    (is (= 7200000 (util/time->milliseconds [2 :hours]   )))))
 
-(deftest remove-conn-test
+(deftest test__remove-conn
   (testing "potamic.util/remove-conn"
-    (is (= (util/remove-conn {:conn {}}) {}))
-    (is (= (util/remove-conn {:conn {} :a 1 :b 2 :c 3}) {:a 1 :b 2 :c 3}))))
+    (is (= {} (util/remove-conn {:conn {}})))
+    (is (= {:a 1 :b 2 :c 3} (util/remove-conn {:conn {} :a 1 :b 2 :c 3})))))
 
-(deftest parse-redis-uri
+(deftest test__parse-redis-uri
   (testing "potamic.util/parse-redis-uri"
     (doseq [[in out] tu/valid-uri-parse-mappings]
       (is (= out (util/parse-redis-uri in))))))

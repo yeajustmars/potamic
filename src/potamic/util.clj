@@ -180,17 +180,22 @@
   [uri-str]
   (let [uri (URI. uri-str)
         user-info (.getUserInfo uri)
-        [user password] (when (seq user-info)
-                          (string/split user-info #":" 2))
+        [?user ?password] (when (seq user-info)
+                            (if (string/includes? user-info ":")
+                              (string/split user-info #":" 2)
+                              [nil user-info]))
+        ?user (when (seq ?user) ?user)
+        ?password (when (seq ?password) ?password)
         path (.getPath uri)
-        db (when (and (seq path) (re-find #"/[0-9]+" path))
+        db (if (and (seq path) (re-find #"/[0-9]+" path))
              (try
                (Integer/parseInt (subs path 1))
                (catch Exception _
-                 0)))]
+                 0))
+             0)]
     {:scheme (.getScheme uri)
-     :user user
-     :password password
+     :user ?user
+     :password ?password
      :host (.getHost uri)
      :port (let [p (.getPort uri)]
              (when (pos? p) p))
