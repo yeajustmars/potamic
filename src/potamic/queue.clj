@@ -375,6 +375,7 @@
                   [(when cnt [:count cnt])
                    (when block [:block (util/time->milliseconds block)])
                    [:streams qname start]])
+            _ (println "\t|> RAW: " (-> (pcar conn (apply car/xread cmd))))
             res (-> (pcar conn (apply car/xread cmd))
                     first
                     second

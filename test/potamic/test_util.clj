@@ -116,9 +116,6 @@
   (destroy-kvrocks-standalone)
   (destroy-kvrocks-cluster)
   (reset-queues!)
-  (create-test-queue conn-redis-standalone)
-  (create-test-queue conn-kvrocks-standalone)
-  (create-test-queue conn-kvrocks-cluster)
   (f))
 
 (defmacro pcar-redis-standalone
