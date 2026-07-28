@@ -33,30 +33,30 @@
           (s/set-attr :new-count new-count)))))
 
 (defn- -new-redis-standalone-sentinel
-  [queue-name queue-group]
+  [queue-name queue-group & [handler]]
   (s/create-sentinel {:queue-uri tu/uri-redis-standalone
                       :queue-name queue-name
                       :queue-group queue-group
                       :frequency ONE-HUNDRED-MILLISECONDS
-                      :handler basic-counter-handler}))
+                      :handler (or handler basic-counter-handler)}))
 
 (defn- -new-kvrocks-standalone-sentinel
-  [queue-name queue-group]
+  [queue-name queue-group & [handler]]
   (s/create-sentinel {:queue-uri tu/uri-kvrocks-standalone
                       :queue-backend :kvrocks
                       :queue-name queue-name
                       :queue-group queue-group
                       :frequency ONE-HUNDRED-MILLISECONDS
-                      :handler basic-counter-handler}))
+                      :handler (or handler basic-counter-handler)}))
 
 (defn- -new-kvrocks-cluster-sentinel
-  [queue-name queue-group]
+  [queue-name queue-group & [handler]]
   (s/create-sentinel {:queue-uri tu/uri-kvrocks-cluster
                       :queue-backend :kvrocks
                       :queue-name queue-name
                       :queue-group queue-group
                       :frequency ONE-HUNDRED-MILLISECONDS
-                      :handler basic-counter-handler}))
+                      :handler (or handler basic-counter-handler)}))
 
 (deftest test__create-sentinel
   (testing "potamic.sentinel/create-sentinel"
@@ -151,26 +151,54 @@
 (deftest test__kvrocks-cluster-sentinel
   (-test-sentinel-runtime :kvrocks :cluster -new-kvrocks-cluster-sentinel))
 
-#_(defn- -test-sentinel-producer-consumer-model
-  [backend typ constructor]
-  (testing (str "Pub/sub | " backend " | " typ)
-    ))
+(defn basic-pubsub-handler
+  [this]
+  (let [q-name (s/get-queue-name this)
+        next-n (inc (s/get-attr this :n-runs))
+        new-msgs (map (fn [n] {:next-n n}) (range next-n (+ 3 next-n)))
+        [_ ?err] (apply q/put q-name new-msgs)]
+    (when ?err
+      (s/set-attr this :last-error ?err))
+    this))
 
-;; (deftest sentinel-producer-consumer-test1
-;;   (testing "queue read/write from within Sentinel"
-;;     (let [s (basic-sentinel
-;;               (fn [this]
-;;                 (let [qname (s/get-queue-name this)
-;;                       n-runs (s/get-attr this :n-runs)]
-;;                   (if (= n-runs 2)
-;;                     (s/stop-sentinel! this)
-;;                     (q/put qname {n-runs "Message put!"}))))
-;;               10)]
-;;       (s/start-sentinel! s)
-;;       (<!! (async/timeout 500))
-;;       (let [qname (s/get-queue-name s)
-;;             consumer (s/get-queue-group s)
-;;             [msgs ?err] (q/read-next! 1 :from qname :as consumer :block 500)]
-;;         (is (nil? ?err))
-;;         (is (= (count msgs) 1))
-;;         (is (= (-> msgs first :msg) {"1" "Message put!"}))))))
+(defn- -test-sentinel-producer-consumer-model
+  [backend typ constructor]
+  (testing (str "| Pub/Sub | " backend " | " typ)
+    (let [q-name (keyword (name backend) (str (name typ) "-pubsub"))
+          q-group (keyword (name backend) (str (name typ) "-pubsub-group"))
+          s (constructor q-name q-group basic-pubsub-handler)]
+      (is (satisfies? potamic.sentinel/SentinelProtocol s))
+      (try
+        (testing "| Start sentinel"
+          (s/start-sentinel! s)
+          (<!! (async/timeout (* 4 ONE-HUNDRED-MILLISECONDS)))
+          (is (true? (s/get-attr s :started?)))
+          (let [last-msgs (atom [])]
+            (dotimes [_ 3]
+              (<!! (async/timeout (* 3 ONE-HUNDRED-MILLISECONDS)))
+              (let [q-name (s/get-queue-name s)
+                    q-group (s/get-queue-group s)
+                    [msgs ?read-err] (q/read-next! 3 :from q-name :as q-group)
+                    ids (map :id msgs)
+                    [n-acked ?ack-err] (apply q/set-processed! q-name ids)]
+                (is (nil? ?read-err))
+                (is (nil? ?ack-err))
+                (is (= 3 n-acked))
+                (is (not= @last-msgs msgs))
+                (reset! last-msgs msgs)))))
+        (catch Exception e
+          (log/error e))
+        (finally
+          (testing "| Stop sentinel"
+            (s/stop-sentinel! s)
+            (<!! (async/timeout (* 4 ONE-HUNDRED-MILLISECONDS)))
+            (is (true? (s/get-attr s :stopped?)))))))))
+
+(deftest test__pubsub-redis-standalone-sentinel
+  (-test-sentinel-producer-consumer-model :redis :standalone -new-redis-standalone-sentinel))
+
+(deftest test__pubsub-kvrocks-standalone-sentinel
+  (-test-sentinel-producer-consumer-model :kvrocks :standalone -new-kvrocks-standalone-sentinel))
+
+(deftest test__pubsub-kvrocks-cluster-sentinel
+  (-test-sentinel-producer-consumer-model :kvrocks :cluster -new-kvrocks-cluster-sentinel))
