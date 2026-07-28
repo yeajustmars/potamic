@@ -135,20 +135,20 @@
       [nil (util/make-exception e)])))
 
 (defn- -initialize-stream
-  "Note: it seems sometimes we get error-as-value (ret) and other times this throws.
+  "Note/hack: it seems sometimes we get error-as-value (ret) and other times this throws.
   This is why we call -check-group-exists in both cases. If ret is an error, it is of
   type clojure.lang.ExceptionInfo."
   [conn queue-name group-name init-id]
   (try
-    (let [ret (pcar conn
-                    (car/xgroup-create
-                      (util/->str queue-name)
-                      (util/->str group-name)
-                      init-id
-                      :mkstream))]
-      (if (= "OK" ret)
+    (let [ret-or-ex-info (pcar conn
+                               (car/xgroup-create
+                                 (util/->str queue-name)
+                                 (util/->str group-name)
+                                 init-id
+                                 :mkstream))]
+      (if (= "OK" ret-or-ex-info)
         [:group-created nil]
-        (-check-group-exists ret)))
+        (-check-group-exists ret-or-ex-info)))
     (catch Exception e
       (-check-group-exists e))))
 

@@ -5,15 +5,14 @@
   (:require [clojure.string :as string]
             [clojure.test :refer [deftest is testing use-fixtures]]
             [clojure.walk :as walk]
-            [clojure.core.async :as async]
             [taoensso.carmine :as car]
             [potamic.connection :refer [pcar]]
             [potamic.queue :as q]
             [potamic.test-util :as tu]))
 
 (use-fixtures :each
-                tu/fx-make-conns
-                tu/fx-prime-db)
+              tu/fx-make-conns
+              tu/fx-prime-db)
 
 (deftest test__create-queue!
   (letfn [(-create-queue [conn]
@@ -428,8 +427,7 @@
                       [create2-res ?create2-err] (q/create-queue! tu/test-queue conn)
                       [destroy2-res ?destroy2-err] (q/destroy-queue! tu/test-queue conn)
                       [create3-res ?create3-err] (q/create-queue! tu/test-queue conn)
-                      [create4-res ?create4-err] (q/create-queue! tu/test-queue conn)
-                      ]
+                      [create4-res ?create4-err] (q/create-queue! tu/test-queue conn)]
                   (is (= :created-with-new-stream create1-res))
                   (is (nil? ?create1-err))
                   (is (= :spec-destroyed_stream-destroyed destroy1-res))
@@ -441,8 +439,7 @@
                   (is (= :created-with-new-stream create3-res))
                   (is (nil? ?create3-err))
                   (is (= :updated-with-existing-stream create4-res))
-                  (is (nil? ?create4-err))
-                  )))]
+                  (is (nil? ?create4-err)))))]
       (testing "potamic.queue/destroy-queue! | Redis standalone"
         (-test-queue-lifecycle :standalone tu/conn-redis-standalone))
       (testing "potamic.queue/destroy-queue! | Kvrocks standalone"

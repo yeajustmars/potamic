@@ -32,16 +32,16 @@
     Examples:
 
     ```clojure
-    (require '[potamic.sentinel :as q])
+    (require '[potamic.sentinel :as s])
 
-    (def s (q/create-sentinel
+    (def s (s/create-sentinel
              {:queue-uri \"redis://default:secret@localhost:6379/0\"
               :queue-name 'my/queue
               :queue-group 'my/group
               :frequency 2000
               :handler (fn [this]
                          (println \"RUN:\"
-                           (q/get-attr this :n-runs)))}))
+                           (s/get-attr this :n-runs)))}))
     ;= #potamic.sentinel.Sentinel
     ;= {:queue-conn
     ;=  {:spec {:uri \"redis://default:secret@localhost:6379/0\"}
@@ -59,7 +59,7 @@
     ;=                :stopped? false
     ;=                :n-runs 0} 0x217abcc9]}
 
-    (q/start-sentinel! s)
+    (s/start-sentinel! s)
     ;= 2023-06-21T19:01:45.533Z m INFO [potamic.sentinel:252] \\
     ;=   - [potamic.sentinel] Started Sentinel for  my/queue
     ;= #potamic.sentinel.Sentinel {:queue-conn [..]
@@ -95,16 +95,16 @@
     Examples:
 
     ```clojure
-    (require '[potamic.sentinel :as q])
+    (require '[potamic.sentinel :as s])
 
-    (def s (q/create-sentinel
+    (def s (s/create-sentinel
              {:queue-uri \"redis://default:secret@localhost:6379/0\"
               :queue-name 'my/queue
               :queue-group 'my/group
               :frequency 2000
               :handler (fn [this]
                          (println \"RUN:\"
-                           (q/get-attr this :n-runs)))}))
+                           (s/get-attr this :n-runs)))}))
     ;= #potamic.sentinel.Sentinel
     ;= {:queue-conn
     ;=  {:spec {:uri \"redis://default:secret@localhost:6379/0\"}
@@ -122,7 +122,7 @@
     ;=                :stopped? false
     ;=                :n-runs 0} 0x217abcc9]}
 
-    (q/start-sentinel! s)
+    (s/start-sentinel! s)
     ;= 2023-06-21T19:01:45.533Z m INFO [potamic.sentinel:252] \\
     ;=   - [potamic.sentinel] Started Sentinel for  my/queue
     ;= #potamic.sentinel.Sentinel {:queue-conn [..]
@@ -134,7 +134,7 @@
     ;= RUN: 3
     ;= [...]
 
-    (q/stop-sentinel! s)
+    (s/stop-sentinel! s)
     ;= 2023-06-21T19:01:58.466Z m INFO [potamic.sentinel:262] \\
     ;=   - [potamic.sentinel] Stopped Sentinel for  my/queue
     ;= 2023-06-21T19:01:45.533Z m INFO [potamic.sentinel:252] \\
@@ -168,16 +168,16 @@
     Examples:
 
     ```clojure
-    (require '[potamic.sentinel :as q])
+    (require '[potamic.sentinel :as s])
 
-    (def s (q/create-sentinel
+    (def s (s/create-sentinel
              {:queue-uri \"redis://default:secret@localhost:6379/0\"
               :queue-name 'my/queue
               :queue-group 'my/group
               :frequency 2000
               :handler (fn [this]
                          (println \"RUN:\"
-                           (q/get-attr this :n-runs)))}))
+                           (s/get-attr this :n-runs)))}))
     ;= #potamic.sentinel.Sentinel
     ;= {:queue-conn
     ;=  {:spec {:uri \"redis://default:secret@localhost:6379/0\"}
@@ -195,7 +195,7 @@
     ;=                :stopped? false
     ;=                :n-runs 0} 0x217abcc9]}
 
-    (q/get-init-id s)
+    (s/get-init-id s)
     ;= 0
     ```
 
@@ -224,16 +224,16 @@
     Examples:
 
     ```clojure
-    (require '[potamic.sentinel :as q])
+    (require '[potamic.sentinel :as s])
 
-    (def s (q/create-sentinel
+    (def s (s/create-sentinel
              {:queue-uri \"redis://default:secret@localhost:6379/0\"
               :queue-name 'my/queue
               :queue-group 'my/group
               :frequency 2000
               :handler (fn [this]
                          (println \"RUN:\"
-                           (q/get-attr this :n-runs)))}))
+                           (s/get-attr this :n-runs)))}))
     ;= #potamic.sentinel.Sentinel
     ;= {:queue-conn
     ;=  {:spec {:uri \"redis://default:secret@localhost:6379/0\"}
@@ -251,7 +251,7 @@
     ;=                :stopped? false
     ;=                :n-runs 0} 0x217abcc9]}
 
-    (q/get-frequency s)
+    (s/get-frequency s)
     ;= 2000
     ```
 
@@ -280,16 +280,16 @@
     Examples:
 
     ```clojure
-    (require '[potamic.sentinel :as q])
+    (require '[potamic.sentinel :as s])
 
-    (def s (q/create-sentinel
+    (def s (s/create-sentinel
              {:queue-uri \"redis://default:secret@localhost:6379/0\"
               :queue-name 'my/queue
               :queue-group 'my/group
               :frequency 2000
               :handler (fn [this]
                          (println \"RUN:\"
-                           (q/get-attr this :n-runs)))}))
+                           (s/get-attr this :n-runs)))}))
     ;= #potamic.sentinel.Sentinel
     ;= {:queue-conn
     ;=  {:spec {:uri \"redis://default:secret@localhost:6379/0\"}
@@ -307,7 +307,7 @@
     ;=                :stopped? false
     ;=                :n-runs 0} 0x217abcc9]}
 
-    (q/get-start-offset s)
+    (s/get-start-offset s)
     ;= 0
     ```
 
@@ -336,16 +336,16 @@
     Examples:
 
     ```clojure
-    (require '[potamic.sentinel :as q])
+    (require '[potamic.sentinel :as s])
 
-    (def s (q/create-sentinel
+    (def s (s/create-sentinel
              {:queue-uri \"redis://default:secret@localhost:6379/0\"
               :queue-name 'my/queue
               :queue-group 'my/group
               :frequency 2000
               :handler (fn [this]
                          (println \"RUN:\"
-                           (q/get-attr this :n-runs)))}))
+                           (s/get-attr this :n-runs)))}))
     ;= #potamic.sentinel.Sentinel
     ;= {:queue-conn
     ;=  {:spec {:uri \"redis://default:secret@localhost:6379/0\"}
@@ -363,7 +363,7 @@
     ;=                :stopped? false
     ;=                :n-runs 0} 0x217abcc9]}
 
-    (q/get-queue-conn s)
+    (s/get-queue-conn s)
     ;= {:spec {:uri \"redis://default:secret@localhost:6379/0\"}
     ;=  :pool
     ;=  #taoensso.carmine.connections.ConnectionPool
@@ -395,16 +395,16 @@
     Examples:
 
     ```clojure
-    (require '[potamic.sentinel :as q])
+    (require '[potamic.sentinel :as s])
 
-    (def s (q/create-sentinel
+    (def s (s/create-sentinel
              {:queue-uri \"redis://default:secret@localhost:6379/0\"
               :queue-name 'my/queue
               :queue-group 'my/group
               :frequency 2000
               :handler (fn [this]
                          (println \"RUN:\"
-                           (q/get-attr this :n-runs)))}))
+                           (s/get-attr this :n-runs)))}))
     ;= #potamic.sentinel.Sentinel
     ;= {:queue-conn
     ;=  {:spec {:uri \"redis://default:secret@localhost:6379/0\"}
@@ -422,7 +422,7 @@
     ;=                :stopped? false
     ;=                :n-runs 0} 0x217abcc9]}
 
-    (q/get-queue-name s)
+    (s/get-queue-name s)
     ;= my/queue
     ```
 
@@ -451,16 +451,16 @@
     Examples:
 
     ```clojure
-    (require '[potamic.sentinel :as q])
+    (require '[potamic.sentinel :as s])
 
-    (def s (q/create-sentinel
+    (def s (s/create-sentinel
              {:queue-uri \"redis://default:secret@localhost:6379/0\"
               :queue-name 'my/queue
               :queue-group 'my/group
               :frequency 2000
               :handler (fn [this]
                          (println \"RUN:\"
-                           (q/get-attr this :n-runs)))}))
+                           (s/get-attr this :n-runs)))}))
     ;= #potamic.sentinel.Sentinel
     ;= {:queue-conn
     ;=  {:spec {:uri \"redis://default:secret@localhost:6379/0\"}
@@ -478,7 +478,7 @@
     ;=                :stopped? false
     ;=                :n-runs 0} 0x217abcc9]}
 
-    (q/get-queue-group s)
+    (s/get-queue-group s)
     ;= my/group
     ```
 
@@ -507,16 +507,16 @@
     Examples:
 
     ```clojure
-    (require '[potamic.sentinel :as q])
+    (require '[potamic.sentinel :as s])
 
-    (def s (q/create-sentinel
+    (def s (s/create-sentinel
              {:queue-uri \"redis://default:secret@localhost:6379/0\"
               :queue-name 'my/queue
               :queue-group 'my/group
               :frequency 2000
               :handler (fn [this]
                          (println \"RUN:\"
-                           (q/get-attr this :n-runs)))}))
+                           (s/get-attr this :n-runs)))}))
     ;= #potamic.sentinel.Sentinel
     ;= {:queue-conn
     ;=  {:spec {:uri \"redis://default:secret@localhost:6379/0\"}
@@ -534,7 +534,7 @@
     ;=                :stopped? false
     ;=                :n-runs 0} 0x217abcc9]}
 
-    (q/get-handler s)
+    (s/get-handler s)
     ;= #function[user/fn--37246]
     ```
 
@@ -563,16 +563,16 @@
     Examples:
 
     ```clojure
-    (require '[potamic.sentinel :as q])
+    (require '[potamic.sentinel :as s])
 
-    (def s (q/create-sentinel
+    (def s (s/create-sentinel
              {:queue-uri \"redis://default:secret@localhost:6379/0\"
               :queue-name 'my/queue
               :queue-group 'my/group
               :frequency 2000
               :handler (fn [this]
                          (println \"RUN:\"
-                           (q/get-attr this :n-runs)))}))
+                           (s/get-attr this :n-runs)))}))
     ;= #potamic.sentinel.Sentinel
     ;= {:queue-conn
     ;=  {:spec {:uri \"redis://default:secret@localhost:6379/0\"}
@@ -590,7 +590,7 @@
     ;=                :stopped? false
     ;=                :n-runs 0} 0x217abcc9]}
 
-    (q/get-signal-channel s)
+    (s/get-signal-channel s)
     ;= #object[clojure.core.async.impl.channels.ManyToManyChannel
     ;=         0x44973096
     ;=         \"clojure.core.async.impl.channels.ManyToManyChannel@44973096\"]
@@ -619,16 +619,16 @@
     Examples:
 
     ```clojure
-    (require '[potamic.sentinel :as q])
+    (require '[potamic.sentinel :as s])
 
-    (def s (q/create-sentinel
+    (def s (s/create-sentinel
              {:queue-uri \"redis://default:secret@localhost:6379/0\"
               :queue-name 'my/queue
               :queue-group 'my/group
               :frequency 2000
               :handler (fn [this]
                          (println \"RUN:\"
-                           (q/get-attr this :n-runs)))}))
+                           (s/get-attr this :n-runs)))}))
     ;= #potamic.sentinel.Sentinel
     ;= {:queue-conn
     ;=  {:spec {:uri \"redis://default:secret@localhost:6379/0\"}
@@ -646,10 +646,10 @@
     ;=                :stopped? false
     ;=                :n-runs 0} 0x217abcc9]}
 
-    (q/get-state s)
+    (s/get-state s)
     ;= {:started? false, :stopped? false, :n-runs 0}
 
-    (do (q/start-sentinel! s) nil)
+    (do (s/start-sentinel! s) nil)
     ;= 2023-06-30T17:06:26.341Z m INFO [potamic.sentinel:618] - \\
     ;= [potamic.sentinel] Started Sentinel for  my/queue
     ;= nil
@@ -657,15 +657,15 @@
     ;= RUN: 2
     ;= RUN: 3
 
-    (q/get-state s)
+    (s/get-state s)
     ;= {:started? true, :stopped? false, :n-runs 4}
 
-    (q/stop-sentinel! s)
+    (s/stop-sentinel! s)
     ;= true
     ;= 2023-06-30T17:06:39.462Z m INFO [potamic.sentinel:628] - \\
     ;= [potamic.sentinel] Stopped Sentinel for  my/queue
 
-    (q/get-state s)
+    (s/get-state s)
     ;= {:started? false, :stopped? true, :n-runs 7}
     ```
 
@@ -700,16 +700,16 @@
     Examples:
 
     ```clojure
-    (require '[potamic.sentinel :as q])
+    (require '[potamic.sentinel :as s])
 
-    (def s (q/create-sentinel
+    (def s (s/create-sentinel
              {:queue-uri \"redis://default:secret@localhost:6379/0\"
               :queue-name 'my/queue
               :queue-group 'my/group
               :frequency 2000
               :handler (fn [this]
                          (println \"RUN:\"
-                           (q/get-attr this :n-runs)))}))
+                           (s/get-attr this :n-runs)))}))
     ;= #potamic.sentinel.Sentinel
     ;= {:queue-conn
     ;=  {:spec {:uri \"redis://default:secret@localhost:6379/0\"}
@@ -727,10 +727,10 @@
     ;=                :stopped? false
     ;=                :n-runs 0} 0x217abcc9]}
 
-    (q/get-attr s :started?)
+    (s/get-attr s :started?)
     ;= false
 
-    (do (q/start-sentinel! s) nil)
+    (do (s/start-sentinel! s) nil)
     ;= 2023-06-30T17:06:26.341Z m INFO [potamic.sentinel:618] - \\
     ;= [potamic.sentinel] Started Sentinel for  my/queue
     ;= nil
@@ -738,7 +738,7 @@
     ;= RUN: 2
     ;= RUN: 3
 
-    (q/get-attr s :started?)
+    (s/get-attr s :started?)
     ;= true
     ```
 
@@ -774,16 +774,16 @@
     Examples:
 
     ```clojure
-    (require '[potamic.sentinel :as q])
+    (require '[potamic.sentinel :as s])
 
-    (def s (q/create-sentinel
+    (def s (s/create-sentinel
              {:queue-uri \"redis://default:secret@localhost:6379/0\"
               :queue-name 'my/queue
               :queue-group 'my/group
               :frequency 2000
               :handler (fn [this]
                          (println \"RUN:\"
-                           (q/get-attr this :n-runs)))}))
+                           (s/get-attr this :n-runs)))}))
     ;= #potamic.sentinel.Sentinel
     ;= {:queue-conn
     ;=  {:spec {:uri \"redis://default:secret@localhost:6379/0\"}
@@ -801,7 +801,7 @@
     ;=                :stopped? false
     ;=                :n-runs 0} 0x217abcc9]}
 
-    (q/set-attr s :process-count 52)
+    (s/set-attr s :process-count 52)
     ;= #potamic.sentinel.Sentinel
     ;= {:queue-conn {:spec {:uri \"redis://default:secret@localhost:6379/0\"}
     ;=               :pool #taoensso.carmine.connections.ConnectionPool[..]}
@@ -819,7 +819,7 @@
     ;=                :process-count 52}
     ;=               0x2a042d0a]}
 
-    (q/get-attr s :process-count)
+    (s/get-attr s :process-count)
     ;= 52
     ```
 
@@ -910,38 +910,38 @@
 
   **Configuration Options:**
 
-  | Option         | Description             | Required | Default |
-  | -------------- | ----------------------- | -------- | ------- |
-  | `queue-uri`    | Redis URI               | &check;  | none    |
-  | `queue-name`   | key name                | &check;  | none    |
-  | `queue-group`  | Consumer Group          | &check;  | none    |
-  | `init-id`      | starting stream ID      |          | 0       |
-  | `frequency`    | (ns) interval to run at | &check;  | none    |
-  | `start-offset` | ms to wait to start     |          | 0       |
-  | `handler`      | 1-artity fn of `this`   | &check;  | none    |
+  | Option          | Description             | Required | Default  |
+  | --------------- | ----------------------- | -------- | -------- |
+  | `queue-uri`     | Redis URI               | &check;  | none     |
+  | `queue-name`    | key name                | &check;  | none     |
+  | `queue-group`   | Consumer Group          | &check;  | none     |
+  | `query-backend` | Data store backend      |          | `:redis` |
+  | `init-id`       | starting stream ID      |          | 0        |
+  | `frequency`     | (ns) interval to run at | &check;  | none     |
+  | `start-offset`  | ms to wait to start     |          | 0        |
+  | `handler`       | 1-artity fn of `this`   | &check;  | none     |
 
   **State:**
 
   | Attr        | Type    | Description                                    |
   | ----------- | ------- | ---------------------------------------------- |
-  | `:started?` | boolean | set on `q/start-sentinel!`/`q/stop-sentinel!`  |
-  | `:stopped?` | boolean | set on `q/start-sentinel!`/`q/stop-sentinel!`  |
+  | `:started?` | boolean | set on `start-sentinel!`/`stop-sentinel!`      |
+  | `:stopped?` | boolean | set on `start-sentinel!`/`stop-sentinel!`      |
   | `:n-runs`   | int     | increments for every interation at `frequency` |
-
 
   Examples:
 
   ```clojure
-  (require '[potamic.sentinel :as q])
+  (require '[potamic.sentinel :as s])
 
-  (def s (q/create-sentinel
+  (def s (s/create-sentinel
            {:queue-uri \"redis://default:secret@localhost:6379/0\"
             :queue-name 'my/queue
             :queue-group 'my/group
             :frequency 2000
             :handler
             (fn [this]
-              (println \"RUN:\" (q/get-attr this :n-runs)))}))
+              (println \"RUN:\" (s/get-attr this :n-runs)))}))
   ;= #potamic.sentinel.Sentinel
   ;= {:queue-conn
   ;=  {:spec {:uri \"redis://default:secret@localhost:6379/0\"}
@@ -976,9 +976,11 @@
   - `potamic.sentinel/set-attr`
   - `potamic.sentinel/start-sentinel!`
   - `potamic.sentinel/stop-sentinel!`"
-  [{:keys [queue-uri queue-name queue-group init-id frequency start-offset handler]
+  [{:keys [queue-uri queue-name queue-group queue-backend init-id frequency start-offset handler]
     :or {start-offset 0 init-id 0}}]
-  (let [queue-conn (potamic.db/make-conn :uri queue-uri)
+  (let [queue-conn (if queue-backend
+                     (potamic.db/make-conn :uri queue-uri :backend queue-backend)
+                     (potamic.db/make-conn :uri queue-uri))
         args {:queue-conn queue-conn
               :queue-name queue-name
               :queue-group queue-group
