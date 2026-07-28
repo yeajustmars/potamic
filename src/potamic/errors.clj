@@ -1,7 +1,6 @@
 (ns potamic.errors
   (:require [potamic.errors.validation :as pv]
-            [potamic.validation :as v])
-  (:gen-class))
+            [potamic.validation :as v]))
 
 (defmacro error
   "Returns Potamic Error. Required keys are `:potamic/err-type` (one of
@@ -32,11 +31,11 @@
 
   - `potamic.errors/throw-potamic-error`
   - `potamic.errors.types/error-types`
-  - `potamic.errors.validation/Valid-Error`"
+  - `potamic.errors.validation/PotamicError`"
   [m]
   (let [{:keys [line column]} (meta &form)
         file *file*]
-    `(let [?err# (v/invalidate pv/Valid-Error ~m)]
+    `(let [?err# (v/invalidate pv/PotamicError ~m)]
        (when ?err#
          (throw (Exception. (format "%s (at %s:%s:%s)"
                                     ?err#
@@ -80,6 +79,6 @@
 
   - `potamic.errors/error`
   - `potamic.errors.types/error-types`
-  - `potamic.errors.validation/Valid-Error`"
+  - `potamic.errors.validation/PotamicError`"
   [error]
   `(throw (Exception. (str ~error))))

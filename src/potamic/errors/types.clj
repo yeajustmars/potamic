@@ -1,5 +1,4 @@
-(ns potamic.errors.types
-  (:gen-class))
+(ns potamic.errors.types)
 
 (def error-types
   "Potamic Error types.
@@ -16,7 +15,7 @@
 
   - `potamicdb.errors/error`
   - `potamicdb.errors/throw-potamic-error`
-  - `potamicdb.errors.validation/Valid-Error`"
+  - `potamicdb.errors.validation/PotamicError`"
   #{:potamic/args-err
     :potamic/db-err
     :potamic/internal-err})

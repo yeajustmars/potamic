@@ -14,27 +14,22 @@ Potamic is a message queue implementation over Redis' Stream data type. It makes
 
 ### deps.edn
 
-> _TODO_: Publish to Clojars
 
 ```clojure
-io.github.chadangelelli/potamic #:git{:tag "v0.1.67" :sha "fdb99e0"}
+io.github.yeajustmars/potamic #:git{:tag "VERSION" :sha "HASH"}
 ```
-
-### Leiningen
-
-> _TODO_: Add example
 
 <a name="docs"></a>
 # Docs
 
 ### Online
 
-[https://chadangelelli.github.io/potamic](https://chadangelelli.github.io/potamic)
+[https://yeajustmars.github.io/potamic](https://yeajustmars.github.io/potamic)
 
 ### Local
 
 ```shell
-git clone https://github.com/chadangelelli/potamic.git
+git clone https://github.com/yeajustmars/potamic.git
 
 cd potamic
 
@@ -85,6 +80,6 @@ bin/doc
 <a name="license"></a>
 # License
 
-Distributed under the [EPL v1.0](https://raw.githubusercontent.com/chadangelelli/potamic/main/LICENSE) (same as Clojure).
+Distributed under the [EPL v1.0](https://raw.githubusercontent.com/yeajustmars/potamic/main/LICENSE) (same as Clojure).
 
-Copyright © 2023 Chad Angelelli
+Copyright © 2023 @yeajustmars

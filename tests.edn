@@ -1,2 +1,4 @@
-#kaocha/v1 {}
-{:plugins [:noyoda.plugin/swap-actual-and-expected]}
+#kaocha/v1
+{:plugins [:kaocha.plugin/hooks]
+ :reporter [kaocha.report/documentation]
+ :kaocha.hooks/pre-run [test-hooks.kaocha.hooks/clear-screen]}

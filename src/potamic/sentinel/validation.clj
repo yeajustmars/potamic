@@ -1,18 +1,18 @@
 (ns potamic.sentinel.validation
   "Validation for `st.queue` library."
   {:added "5.0"
-   :author "Chad Angelelli"}
+   :author "@yeajustmars"}
   (:require [malli.core :as malli]
-            [potamic.queue.validation :as queue-val]
-            [potamic.db.validation :as db-val]
+            [potamic.queue.validation :refer [QueueValue]]
+            [potamic.db.validation :refer [Conn]]
             [potamic.validation :as v]))
 
-(def Valid-Create-Sentinel-Args
+(def CreateSentinelArgs
   (malli/schema
     [:map {:closed true}
-     [:queue-conn db-val/Valid-Conn]
-     [:queue-name queue-val/valid-queue-value?]
-     [:queue-group queue-val/valid-queue-value?]
+     [:queue-conn Conn]
+     [:queue-name QueueValue]
+     [:queue-group QueueValue]
      [:frequency int?]
      [:handler (v/f fn? "Handler must be a function")]
      [:init-id {:optional true} int?]
