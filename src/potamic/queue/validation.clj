@@ -6,6 +6,8 @@
 
 (def queue-exists? (v/f (fn [x] (get @queues/queues_ x)) "Unknown queue"))
 
+(def valid-queue-value? [:or keyword? symbol? string?])
+
 (def QueueValue [:or keyword? symbol? string?])
 
 (def CreateQueueArgs
