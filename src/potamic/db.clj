@@ -10,8 +10,14 @@
 
 (defn- -make-redis-conn
   "Makes a standard Redis connection usable by Carmine."
-  [uri pool skip-checks?]
-  (let [conn {:pool pool :spec {:backend :redis :uri uri}}]
+  [uri parsed-uri pool skip-checks?]
+  (let [;; If it's a native redis:// URI, preserve the raw URI string for standard Carmine behavior.
+        ;; If it's a kvrocks:// URI in Redis-mode, unpack it so Carmine doesn't reject the scheme.
+        spec (if (= "redis" (:scheme parsed-uri))
+               {:backend :redis :uri uri}
+               (-> (select-keys parsed-uri [:host :port :password :db :user])
+                   (assoc :backend :redis)))
+        conn {:pool pool :spec spec}]
     (if skip-checks?
       conn
       (try
@@ -42,9 +48,10 @@
   See also:
 
   - `potamic.connection/pcar`"
-  [uri pool skip-checks?]
-  (let [uri-obj (pu/parse-redis-uri uri)
-        spec (-> (select-keys uri-obj [:host :port :password :db])
+  [parsed-uri pool skip-checks?]
+  (let [;; Explicitly extract ONLY host, port, password, and db.
+        ;; This intentionally drops :user to avoid Carmine's Redis 6+ ACL AUTH bug with Kvrocks.
+        spec (-> (select-keys parsed-uri [:host :port :password :db])
                  (assoc :backend :kvrocks))
         conn {:pool pool
               :spec spec}]
@@ -52,12 +59,12 @@
       conn
       (let [db (:db spec)
             pw (:password spec)
-            ns-cmd ["NAMESPACE" "ADD" db db]]
+            ns-cmd ["NAMESPACE" "ADD" (str db) (str db)]]
         (when-not (contains? @kvrocks-namespaces_ db)
           (try
             (if (seq pw)
               (wcar conn
-                    (car/auth (:password spec))
+                    (car/auth pw)
                     (car/redis-call ns-cmd))
               (wcar conn
                     :as-pipeline
@@ -76,9 +83,20 @@
     conn))
 
 (defn make-conn
-  "Creates a connection for Redis or Kvrocks. Returns `conn` or throws Potamic Error.
+  "Creates a connection for Redis. Returns `conn` or throws Potamic Error.
   On success, `conn` will be usable by `potamic.queue` and the underlying
-  `taoensso.carmine/wcar` library."
+  `taoensso.carmine/wcar` library.
+
+  **Examples:**
+
+  ```clojure
+  (require '[potamic.db :as db])
+
+  (db/make-conn :uri \"redis://localhost:6379/0\")
+  ;= {:spec
+  ;=  {:uri \"redis://localhost:6379/0\"}
+  ;=   :pool #taoensso.carmine.connections.ConnectionPool[..]}
+  ```"
   [& {:keys [backend kvrocks-mode uri pool skip-checks?] :as args}]
   (if-let [args-err (v/invalidate dbv/MakeConnArgs args)]
     (let [err (e/error {:potamic/err-type :potamic/args-err
@@ -92,33 +110,16 @@
           scheme-backend (when (= "kvrocks" (:scheme parsed-uri)) :kvrocks)
           uri-mode (get-in parsed-uri [:query "mode"])
           mode (or kvrocks-mode (when (= uri-mode "redis") :redis) :namespace)
+
           resolved-backend (if (and (or (= scheme-backend :kvrocks) (= backend :kvrocks))
                                     (= mode :redis))
                              :redis
                              (or scheme-backend backend :redis))]
       (case resolved-backend
-        :kvrocks (-make-kvrocks-conn uri pool skip-checks?)
-        (-make-redis-conn uri pool skip-checks?)))))
+        :kvrocks (-make-kvrocks-conn parsed-uri pool skip-checks?)
+        (-make-redis-conn uri parsed-uri pool skip-checks?)))))
 
 (defn key-exists?
-  "Returns boolean after checking if key exists in DB.
-
-  Examples:
-
-  ```clojure
-  (require '[potamic.db :as db]
-           '[potamic.queue :as q])
-
-  (def conn (db/make-conn :uri \"redis://localhost:6379/0\"))
-  ;= {:spec
-  ;=  {:uri \"redis://localhost:6379/0\"}
-  ;=   :pool #taoensso.carmine.connections.ConnectionPool[..]}
-
-  (q/create-queue :my/queue conn)
-  ;= [true nil]
-
-  (db/key-exists? :my/queue conn)
-  ;= true
-  ```"
+  "Returns boolean after checking if key exists in DB."
   [k conn]
   (> (pcar conn (car/exists (pu/->str k))) 0))
