@@ -202,3 +202,18 @@
 
 (deftest test__pubsub-kvrocks-cluster-sentinel
   (-test-sentinel-producer-consumer-model :kvrocks :cluster -new-kvrocks-cluster-sentinel))
+
+(deftest test__create-sentinel-kvrocks-redis-mode
+  (testing "Sentinel creation accepts unpacked kvrocks URI in Redis mode"
+    (let [watcher-opts {:queue-uri "kvrocks://secret@127.0.0.1:6666/7?mode=redis"
+                        :queue-name :test-queue
+                        :queue-group :test-group
+                        :frequency 1000
+                        :handler (fn [_] nil)}
+          ;; This will connect to the local test DB successfully
+          s (s/create-sentinel watcher-opts)]
+      (is (some? s))
+      (is (= false (s/get-attr s :started?)))
+      (is (= :redis (get-in (s/get-queue-conn s) [:spec :backend])))
+      (is (nil? (get-in (s/get-queue-conn s) [:spec :user])))
+      (is (= "secret" (get-in (s/get-queue-conn s) [:spec :password]))))))

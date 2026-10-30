@@ -80,3 +80,19 @@
               exists-after? (db/key-exists? random-key tu/conn-kvrocks-cluster)]
           (is (false? exists-before?))
           (is (true? exists-after?)))))))
+
+(deftest test__make-conn-unpacked-validation
+  (testing "Kvrocks URI in Redis mode unpacks into a valid MapSpec without throwing args-err"
+    (let [conn (db/make-conn :uri "kvrocks://localhost:6666/0?mode=redis" :skip-checks? true)]
+      ;; Ensure the unpacked spec matches the MapSpec/Conn schema
+      (is (nil? (potamic.validation/invalidate potamic.db.validation/Conn conn)))
+      (is (= :redis (get-in conn [:spec :backend])))
+      (is (= "localhost" (get-in conn [:spec :host])))
+      (is (nil? (get-in conn [:spec :user])))
+      (is (nil? (get-in conn [:spec :password])))))
+
+  (testing "Kvrocks URI with password unpacks correctly"
+    (let [conn (db/make-conn :uri "kvrocks://secret@localhost:6666/3?mode=redis" :skip-checks? true)]
+      (is (nil? (potamic.validation/invalidate potamic.db.validation/Conn conn)))
+      (is (= "secret" (get-in conn [:spec :password])))
+      (is (nil? (get-in conn [:spec :user]))))))
