@@ -9,11 +9,12 @@
             [taoensso.timbre :as log]))
 
 (defn- -make-redis-conn
-  "Makes a standard Redis connection usable by Carmine."
+  "Makes a standard Redis connection usable by Carmine.
+
+  - If it's a native redis:// URI, preserve the raw URI string for standard Carmine behavior.
+  - If it's a kvrocks:// URI in Redis-mode, unpack it so Carmine doesn't reject the scheme."
   [uri parsed-uri pool skip-checks?]
-  (let [;; If it's a native redis:// URI, preserve the raw URI string for standard Carmine behavior.
-        ;; If it's a kvrocks:// URI in Redis-mode, unpack it so Carmine doesn't reject the scheme.
-        spec (if (= "redis" (:scheme parsed-uri))
+  (let [spec (if (= "redis" (:scheme parsed-uri))
                {:backend :redis :uri uri}
                (-> (select-keys parsed-uri [:host :port :password :db :user])
                    (assoc :backend :redis)))
@@ -45,13 +46,15 @@
   a password of `N` and then inject a `(car/auth N)` call into Carmine via the
   `potamic.connection/pcar` macro.
 
+
+  - Explicitly extract ONLY host, port, password, and db.
+  - This intentionally drops :user to avoid Carmine's Redis 6+ ACL AUTH bug with Kvrocks.
+
   See also:
 
   - `potamic.connection/pcar`"
   [parsed-uri pool skip-checks?]
-  (let [;; Explicitly extract ONLY host, port, password, and db.
-        ;; This intentionally drops :user to avoid Carmine's Redis 6+ ACL AUTH bug with Kvrocks.
-        spec (-> (select-keys parsed-uri [:host :port :password :db])
+  (let [spec (-> (select-keys parsed-uri [:host :port :password :db])
                  (assoc :backend :kvrocks))
         conn {:pool pool
               :spec spec}]
@@ -110,7 +113,6 @@
           scheme-backend (when (= "kvrocks" (:scheme parsed-uri)) :kvrocks)
           uri-mode (get-in parsed-uri [:query "mode"])
           mode (or kvrocks-mode (when (= uri-mode "redis") :redis) :namespace)
-
           resolved-backend (if (and (or (= scheme-backend :kvrocks) (= backend :kvrocks))
                                     (= mode :redis))
                              :redis
