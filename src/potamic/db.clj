@@ -76,21 +76,10 @@
     conn))
 
 (defn make-conn
-  "Creates a connection for Redis. Returns `conn` or throws Potamic Error.
+  "Creates a connection for Redis or Kvrocks. Returns `conn` or throws Potamic Error.
   On success, `conn` will be usable by `potamic.queue` and the underlying
-  `taoensso.carmine/wcar` library.
-
-  **Examples:**
-
-  ```clojure
-  (require '[potamic.db :as db])
-
-  (db/make-conn :uri \"redis://localhost:6379/0\")
-  ;= {:spec
-  ;=  {:uri \"redis://localhost:6379/0\"}
-  ;=   :pool #taoensso.carmine.connections.ConnectionPool[..]}
-  ```"
-  [& {:keys [backend uri pool skip-checks?] :as args}]
+  `taoensso.carmine/wcar` library."
+  [& {:keys [backend kvrocks-mode uri pool skip-checks?] :as args}]
   (if-let [args-err (v/invalidate dbv/MakeConnArgs args)]
     (let [err (e/error {:potamic/err-type :potamic/args-err
                         :potamic/err-fatal? true
@@ -98,8 +87,16 @@
                                               "potamic.db/make-conn")
                         :potamic/err-data {:args args :err args-err}})]
       (e/throw-potamic-error err))
-    (let [pool (or pool (conn/make-connection-pool))]
-      (case backend
+    (let [pool (or pool (conn/make-connection-pool))
+          parsed-uri (pu/parse-redis-uri uri)
+          scheme-backend (when (= "kvrocks" (:scheme parsed-uri)) :kvrocks)
+          uri-mode (get-in parsed-uri [:query "mode"])
+          mode (or kvrocks-mode (when (= uri-mode "redis") :redis) :namespace)
+          resolved-backend (if (and (or (= scheme-backend :kvrocks) (= backend :kvrocks))
+                                    (= mode :redis))
+                             :redis
+                             (or scheme-backend backend :redis))]
+      (case resolved-backend
         :kvrocks (-make-kvrocks-conn uri pool skip-checks?)
         (-make-redis-conn uri pool skip-checks?)))))
 

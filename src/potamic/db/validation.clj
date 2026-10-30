@@ -5,10 +5,14 @@
 (def OptionalBackend
   [:backend {:optional true :default :redis} [:maybe [:enum :redis :kvrocks]]])
 
+(def OptionalKvrocksMode
+  [:kvrocks-mode {:optional true :default :namespace} [:maybe [:enum :redis :namespace]]])
+
 (def UriSpec
   [:map {:closed true}
    [:uri (v/f v/valid-redis-uri? "Invalid Redis URI")]
-   OptionalBackend])
+   OptionalBackend
+   OptionalKvrocksMode])
 
 (def MapSpec
   [:map {:closed true}
@@ -17,7 +21,8 @@
    [:user {:optional true} [:string {:min 1 :max 1024}]]
    [:password {:optional true} [:string {:min 1 :max 1024}]]
    [:db [:int {:min 0 :max 64}]]
-   OptionalBackend])
+   OptionalBackend
+   OptionalKvrocksMode])
 
 (def Conn
   (malli/schema
@@ -28,6 +33,7 @@
 (def MakeConnArgs
   [:map
    OptionalBackend
+   OptionalKvrocksMode
    [:uri (v/f v/valid-redis-uri? "Invalid Redis URI")]
    [:pool {:optional true} map?]
    [:skip-checks? {:optional true} [:maybe :boolean]]])

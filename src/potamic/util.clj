@@ -167,22 +167,13 @@
   (into {} (for [[k v] m] [k (nippy/freeze v)])))
 
 (defn parse-redis-uri
-  "Parses a Redis URI string using java.net.URI into a Clojure map of the form:
-
-  ```clojure
-  {:scheme \"redis\"
-   :user \"STRING|nil\"
-   :password \"STRING|nil\"
-   :host \"STRING\"
-   :port \"INT\"
-   :db \"INT|nil\"}
-  ```"
+  "Parses a Redis/Kvrocks URI string using java.net.URI into a Clojure map."
   [uri-str]
   (let [uri (URI. uri-str)
         user-info (.getUserInfo uri)
         [?user ?password] (when (seq user-info)
-                            (if (string/includes? user-info ":")
-                              (string/split user-info #":" 2)
+                            (if (clojure.string/includes? user-info ":")
+                              (clojure.string/split user-info #":" 2)
                               [nil user-info]))
         ?user (when (seq ?user) ?user)
         ?password (when (seq ?password) ?password)
@@ -190,13 +181,18 @@
         db (if (and (seq path) (re-find #"/[0-9]+" path))
              (try
                (Integer/parseInt (subs path 1))
-               (catch Exception _
-                 0))
-             0)]
-    {:scheme (.getScheme uri)
-     :user ?user
-     :password ?password
-     :host (.getHost uri)
-     :port (let [p (.getPort uri)]
-             (when (pos? p) p))
-     :db db}))
+               (catch Exception _ 0))
+             0)
+        query (.getQuery uri)
+        query-params (when query
+                       (into {}
+                             (for [kv (clojure.string/split query #"&")
+                                   :let [[k v] (clojure.string/split kv #"=" 2)]]
+                               [k (or v "")])))]
+    (cond-> {:scheme (.getScheme uri)
+             :user ?user
+             :password ?password
+             :host (.getHost uri)
+             :port (let [p (.getPort uri)] (when (pos? p) p))
+             :db db}
+      query-params (assoc :query query-params))))
