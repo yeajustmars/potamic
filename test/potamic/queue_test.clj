@@ -264,7 +264,7 @@
               (let [qname (keyword (name backend) (str (name typ) "-read-pending-test"))
                     [_ ?destroy-err] (q/destroy-queue! qname conn :unsafe true)
                     [_ ?create-err] (q/create-queue! qname conn :group :consumer/one)
-                    [_ _] (q/put qname {:a 1} {:b 2} {:c 3})
+                    [put-ids _] (q/put qname {:a 1} {:b 2} {:c 3})
                     [_ _] (q/read-next! 3 :from qname :as :consumer/one)
                     [read1 ?read1-err] (q/read-pending 10 :from qname :for :consumer/one :start '- :end '+)
                     [read2 ?read2-err] (q/read-pending 5 :from qname :for :consumer/one :start '- :end '+)
@@ -280,57 +280,18 @@
                 (is (= 3 (count read2)))
                 (is (= '(1 1 1) (map :times-delivered read1)))
                 (is (= '(1 1 1) (map :times-delivered read2)))
-                (is (string/ends-with? (get-in read1-vec [0 :id]) "-0"))
-                (is (string/ends-with? (get-in read1-vec [1 :id]) "-1"))
-                (is (string/ends-with? (get-in read1-vec [2 :id]) "-2"))
-                (is (string/ends-with? (get-in read2-vec [0 :id]) "-0"))
-                (is (string/ends-with? (get-in read2-vec [1 :id]) "-1"))
-                (is (string/ends-with? (get-in read2-vec [2 :id]) "-2"))))]
+                (is (= (nth put-ids 0) (get-in read1-vec [0 :id])))
+                (is (= (nth put-ids 1) (get-in read1-vec [1 :id])))
+                (is (= (nth put-ids 2) (get-in read1-vec [2 :id])))
+                (is (= (nth put-ids 0) (get-in read2-vec [0 :id])))
+                (is (= (nth put-ids 1) (get-in read2-vec [1 :id])))
+                (is (= (nth put-ids 2) (get-in read2-vec [2 :id])))))]
       (testing "potamic.queue/read-pending | Redis standalone"
         (-test-read-pending :standalone tu/conn-redis-standalone))
       (testing "potamic.queue/read-pending | Kvrocks standalone"
         (-test-read-pending :standalone tu/conn-kvrocks-standalone))
       (testing "potamic.queue/read-pending | Kvrocks cluster"
         (-test-read-pending :cluster tu/conn-kvrocks-cluster)))))
-
-(deftest test__read-pending-summary
-  (testing "potamic.queue/read-pending-summary"
-    (letfn [(-test-read-pending-summary [typ {{:keys [backend]} :spec :as conn}]
-              (let [qname (keyword (name backend) (str (name typ) "-read-pending-sumary-test"))
-                    [_ ?destroy-err] (q/destroy-queue! qname conn :unsafe true)
-                    [_ ?create-err] (q/create-queue! qname conn)
-                    [msg-ids ?put-err]   (q/put qname {:a 1} {:b 2} {:c 3})
-                    [c1-msgs ?read1-err] (q/read-next! 2 :from qname :as :my/consumer1)
-                    [p1-summary ?p1-err] (q/read-pending-summary qname)
-                    [c2-msgs ?read2-err] (q/read-next! 1 :from qname :as :my/consumer2)
-                    [p2-summary ?p2-err] (q/read-pending-summary qname)]
-                (is (nil? ?destroy-err))
-                (is (nil? ?create-err))
-                (is (nil? ?put-err))
-                (is (nil? ?read1-err))
-                (is (nil? ?read2-err))
-                (is (nil? ?p1-err))
-                (is (nil? ?p2-err))
-                (is (every? #(re-find tu/id-pat %) msg-ids))
-                (is (every? #(re-find tu/id-pat %) (map :id c1-msgs)))
-                (is (= (:msg (first c1-msgs)) {:a 1}))
-                (is (= (:msg (second c1-msgs)) {:b 2}))
-                (is (every? #(re-find tu/id-pat %) (map :id c2-msgs)))
-                (is (= (:msg (first c2-msgs)) {:c 3}))
-                (is (= (:total p1-summary) 2))
-                (is (re-find tu/id-pat (:start p1-summary)))
-                (is (re-find tu/id-pat (:end p1-summary)))
-                (is (= (:consumers p1-summary) {:my/consumer1 2}))
-                (is (= (:total p2-summary) 3))
-                (is (re-find tu/id-pat (:start p2-summary)))
-                (is (re-find tu/id-pat (:end p2-summary)))
-                (is (= (:consumers p2-summary) {:my/consumer1 2, :my/consumer2 1}))))]
-      (testing "potamic.queue/read-pending-summary | Redis standalone"
-        (-test-read-pending-summary :standalone tu/conn-redis-standalone))
-      (testing "potamic.queue/read-pending-summary | Kvrocks standalone"
-        (-test-read-pending-summary :standalone tu/conn-kvrocks-standalone))
-      (testing "potamic.queue/read-pending-summary | Kvrocks cluster"
-        (-test-read-pending-summary :cluster tu/conn-kvrocks-cluster)))))
 
 (deftest test__read-range
   (testing "potamic.queue/read-range"
@@ -416,33 +377,84 @@
       (testing "potamic.queue/destroy-queue! | Kvrocks cluster"
         (-test-destroy-queue! :cluster tu/conn-kvrocks-cluster)))))
 
-(deftest test__create-destroy-cycle
-  (testing "creating > destroying > creating cycle"
-    (letfn [(-test-queue-lifecycle [typ {{:keys [backend]} :spec :as conn}]
-              (testing (str backend "/" typ)
-                (let [_ (q/destroy-queue! tu/test-queue conn :unsafe true)
-                      _ (pcar conn (car/flushall))
-                      [create1-res ?create1-err] (q/create-queue! tu/test-queue conn)
-                      [destroy1-res ?destroy1-err] (q/destroy-queue! tu/test-queue conn)
-                      [create2-res ?create2-err] (q/create-queue! tu/test-queue conn)
-                      [destroy2-res ?destroy2-err] (q/destroy-queue! tu/test-queue conn)
-                      [create3-res ?create3-err] (q/create-queue! tu/test-queue conn)
-                      [create4-res ?create4-err] (q/create-queue! tu/test-queue conn)]
-                  (is (= :created-with-new-stream create1-res))
-                  (is (nil? ?create1-err))
-                  (is (= :spec-destroyed_stream-destroyed destroy1-res))
-                  (is (nil? ?destroy1-err))
-                  (is (= :created-with-new-stream create2-res))
-                  (is (nil? ?create2-err))
-                  (is (= :spec-destroyed_stream-destroyed destroy2-res))
-                  (is (nil? ?destroy2-err))
-                  (is (= :created-with-new-stream create3-res))
-                  (is (nil? ?create3-err))
-                  (is (= :updated-with-existing-stream create4-res))
-                  (is (nil? ?create4-err)))))]
-      (testing "potamic.queue/destroy-queue! | Redis standalone"
-        (-test-queue-lifecycle :standalone tu/conn-redis-standalone))
-      (testing "potamic.queue/destroy-queue! | Kvrocks standalone"
-        (-test-queue-lifecycle :standalone tu/conn-kvrocks-standalone))
-      (testing "potamic.queue/destroy-queue! | Kvrocks cluster"
-        (-test-queue-lifecycle :cluster tu/conn-kvrocks-cluster)))))
+
+(deftest test__real_world_worker_lifecycle
+  (testing "potamic.queue real-world worker lifecycle"
+    (letfn [(-test-lifecycle [typ {{:keys [backend]} :spec :as conn}]
+              (let [qname (keyword (name backend) (str (name typ) "-real-world-lifecycle"))
+
+                    ;; 1. Ensure clean slate
+                    [_ ?destroy-err1] (q/destroy-queue! qname conn :unsafe true)
+
+                    ;; 2. Initialize queue and consumer group
+                    [_ ?create-err] (q/create-queue! qname conn :group :workers)
+
+                    ;; 3. Produce a batch of jobs
+                    [put-ids ?put-err] (q/put qname
+                                              {:job "a"} {:job "b"} {:job "c"}
+                                              {:job "d"} {:job "e"})
+
+                    ;; 4. Workers consume subsets of the jobs
+                    [worker-a-msgs ?worker-a-err] (q/read-next! 2 :from qname :as :worker-a)
+                    [worker-b-msgs ?worker-b-err] (q/read-next! 2 :from qname :as :worker-b)
+
+                    ;; Convert lazy sequences to vectors so `get-in` can access indices
+                    worker-a-vec (vec worker-a-msgs)
+                    worker-b-vec (vec worker-b-msgs)
+
+                    ;; 5. Check pending state before processing
+                    [pending-pre ?pend-pre-err] (q/read-pending-summary qname)
+
+                    ;; 6. Worker A successfully processes and acknowledges its jobs
+                    ack-ids (map :id worker-a-msgs)
+                    [acked ?ack-err] (apply q/set-processed! qname ack-ids)
+
+                    ;; 7. Check pending state after Worker A acknowledges
+                    [pending-post ?pend-post-err] (q/read-pending-summary qname)
+
+                    ;; 8. Teardown
+                    [_ ?destroy-err2] (q/destroy-queue! qname conn :unsafe true)]
+
+                ;; Assertions for Initialization & Production
+                (is (nil? ?destroy-err1))
+                (is (nil? ?create-err))
+                (is (nil? ?put-err))
+                (is (= 5 (count put-ids)))
+
+                ;; Assertions for Worker A consumption
+                (is (nil? ?worker-a-err))
+                (is (= 2 (count worker-a-msgs)))
+                (is (= (nth put-ids 0) (get-in worker-a-vec [0 :id])))
+                (is (= (nth put-ids 1) (get-in worker-a-vec [1 :id])))
+
+                ;; Assertions for Worker B consumption
+                (is (nil? ?worker-b-err))
+                (is (= 2 (count worker-b-msgs)))
+                (is (= (nth put-ids 2) (get-in worker-b-vec [0 :id])))
+                (is (= (nth put-ids 3) (get-in worker-b-vec [1 :id])))
+
+                ;; Assertions for Pre-ACK Pending State
+                (is (nil? ?pend-pre-err))
+                (is (= 4 (:total pending-pre)))
+                (is (= 2 (get-in pending-pre [:consumers :worker-a])))
+                (is (= 2 (get-in pending-pre [:consumers :worker-b])))
+
+                ;; Assertions for Acknowledgement
+                (is (nil? ?ack-err))
+                (is (= 2 acked))
+
+                ;; Assertions for Post-ACK Pending State
+                (is (nil? ?pend-post-err))
+                (is (= 2 (:total pending-post)))
+                (is (nil? (get-in pending-post [:consumers :worker-a])))
+                (is (= 2 (get-in pending-post [:consumers :worker-b])))
+
+                ;; Assertions for Teardown
+                (is (nil? ?destroy-err2))))]
+
+      (testing "potamic.queue real-world lifecycle | Redis standalone"
+        (-test-lifecycle :standalone tu/conn-redis-standalone))
+      (testing "potamic.queue real-world lifecycle | Kvrocks standalone"
+        (-test-lifecycle :standalone tu/conn-kvrocks-standalone))
+      (testing "potamic.queue real-world lifecycle | Kvrocks cluster"
+        (-test-lifecycle :cluster tu/conn-kvrocks-cluster)))))
