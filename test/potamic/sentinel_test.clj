@@ -217,3 +217,24 @@
       (is (= :redis (get-in (s/get-queue-conn s) [:spec :backend])))
       (is (nil? (get-in (s/get-queue-conn s) [:spec :user])))
       (is (= "secret" (get-in (s/get-queue-conn s) [:spec :password]))))))
+
+(deftest test__sentinel-survives-handler-exception
+  (testing "Sentinel records :last-error and keeps running when handler throws"
+    (let [attempts (atom 0)
+          flaky-handler (fn [this]
+                          (let [n (swap! attempts inc)]
+                            (if (= n 1)
+                              (throw (ex-info "Simulated transient failover" {:attempt n}))
+                              (s/set-attr this :recovered? true))))
+          s (-new-redis-standalone-sentinel :redis/flaky-sentinel
+                                            :redis/flaky-sentinel-group
+                                            flaky-handler)]
+      (try
+        (s/start-sentinel! s)
+        (<!! (async/timeout (* 4 ONE-HUNDRED-MILLISECONDS)))
+        (is (true? (s/get-attr s :started?)))
+        (is (true? (s/get-attr s :recovered?)))
+        (is (= "Simulated transient failover" (get-in (s/get-attr s :last-error) [:cause])))
+        (finally
+          (s/stop-sentinel! s)
+          (<!! (async/timeout (* 3 ONE-HUNDRED-MILLISECONDS))))))))

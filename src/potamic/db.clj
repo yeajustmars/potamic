@@ -34,25 +34,21 @@
             (throw e)))))))
 
 (def kvrocks-namespaces_
-  "Just keeps track of created Kvrocks Namespaces for side-effect purposes.
+  "Tracks created Kvrocks Namespaces for side-effect purposes.
   When `make-conn` is called for `:kvrocks` backend, a new namespace is created
-  if it doesn't already exist. This tracks what's already been created."
+  if it doesn't already exist."
   (atom #{}))
+
+(defn reset-kvrocks-namespaces!
+  "Clears cached Kvrocks namespace registrations (useful after container restarts)."
+  []
+  (reset! kvrocks-namespaces_ #{}))
 
 (defn- -make-kvrocks-conn
   "Makes a Kvrocks connection usable by Carmine. Kvrocks changes how Redis does databases
   (0-N) in that it creates password-protected namespaces instead of numbers. This function
-  will mimic/duck-type Kvrocks into behaving like Redis by creating a Namespace of `N` with
-  a password of `N` and then inject a `(car/auth N)` call into Carmine via the
-  `potamic.connection/pcar` macro.
-
-
-  - Explicitly extract ONLY host, port, password, and db.
-  - This intentionally drops :user to avoid Carmine's Redis 6+ ACL AUTH bug with Kvrocks.
-
-  See also:
-
-  - `potamic.connection/pcar`"
+  mimics Kvrocks into behaving like Redis by creating a Namespace of `N` with a password of
+  `N` and injecting `(car/auth N)` via `potamic.connection/pcar`."
   [parsed-uri pool skip-checks?]
   (let [spec (-> (select-keys parsed-uri [:host :port :password :db])
                  (assoc :backend :kvrocks))
@@ -86,20 +82,7 @@
     conn))
 
 (defn make-conn
-  "Creates a connection for Redis. Returns `conn` or throws Potamic Error.
-  On success, `conn` will be usable by `potamic.queue` and the underlying
-  `taoensso.carmine/wcar` library.
-
-  **Examples:**
-
-  ```clojure
-  (require '[potamic.db :as db])
-
-  (db/make-conn :uri \"redis://localhost:6379/0\")
-  ;= {:spec
-  ;=  {:uri \"redis://localhost:6379/0\"}
-  ;=   :pool #taoensso.carmine.connections.ConnectionPool[..]}
-  ```"
+  "Creates a connection for Redis or Kvrocks. Returns `conn` or throws Potamic Error."
   [& {:keys [backend kvrocks-mode uri pool skip-checks?] :as args}]
   (if-let [args-err (v/invalidate dbv/MakeConnArgs args)]
     (let [err (e/error {:potamic/err-type :potamic/args-err

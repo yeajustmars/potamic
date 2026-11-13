@@ -34,6 +34,8 @@ services:
       - "6667"
       - "--requirepass"
       - "secret"
+      - "--redis-databases"
+      - "16"
     ports:
       - "6667:6667"
 
@@ -51,6 +53,8 @@ services:
       - "secret"
       - "--slaveof"
       - "potamic-kvrocks-sentinel-master 6667"
+      - "--redis-databases"
+      - "16"
     ports:
       - "6668:6667" # Mapped to 6668 on your host machine to prevent collisions
     depends_on:
@@ -106,6 +110,8 @@ services:
       - "6666"
       - "--requirepass"
       - "secret"
+      - "--redis-databases"
+      - "16"
     ports:
       - "6666:6666"
 
