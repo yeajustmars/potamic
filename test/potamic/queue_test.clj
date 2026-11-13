@@ -458,3 +458,80 @@
         (-test-lifecycle :standalone tu/conn-kvrocks-standalone))
       (testing "potamic.queue real-world lifecycle | Kvrocks cluster"
         (-test-lifecycle :cluster tu/conn-kvrocks-cluster)))))
+
+(deftest test__stream-recovery-and-inspection
+  (testing "potamic.queue stream recovery, trimming, deletion & info primitives"
+    (letfn [(-test-recovery [typ {{:keys [backend]} :spec :as conn}]
+              (let [qname (keyword (name backend) (str (name typ) "-recovery-test"))
+                    [_ _] (q/destroy-queue! qname conn :unsafe true)
+                    [create-status ?create-err] (q/create-queue! qname conn :group :workers)
+                    [put-ids ?put-err] (q/put qname {:n 1} {:n 2} {:n 3} {:n 4})
+                    [len-before ?len-err1] (q/stream-len qname)
+                    [info-map ?info-err] (q/stream-info qname)
+                    [groups-vec ?groups-err] (q/stream-groups qname)
+                    [rev-msgs ?rev-err] (q/read-rev-range qname :count 2)]
+                (is (= :created-with-new-stream create-status))
+                (is (nil? ?create-err))
+                (is (nil? ?put-err))
+                (is (nil? ?len-err1))
+                (is (= 4 len-before))
+                (is (nil? ?info-err))
+                (is (= 4 (:length info-map)))
+                (is (nil? ?groups-err))
+                (is (= 1 (count groups-vec)))
+                (is (nil? ?rev-err))
+                (is (= [{:n 4} {:n 3}] (mapv :msg rev-msgs)))
+
+                ;; Worker-1 reads 2 messages and crashes before acking
+                (let [[w1-msgs ?w1-err] (q/read-next! 2 :from qname :as :worker-1)]
+                  (is (nil? ?w1-err))
+                  (is (= 2 (count w1-msgs)))
+
+                  ;; Check XINFO CONSUMERS
+                  (let [[consumers ?cons-err] (q/stream-consumers qname)]
+                    (is (nil? ?cons-err))
+                    (is (= 1 (count consumers)))
+                    (is (= "worker-1" (:name (first consumers)))))
+
+                  ;; Worker-2 reclaims the 2 unacked messages via XCLAIM
+                  (Thread/sleep 25)
+                  (let [claim-ids (mapv :id w1-msgs)
+                        [claimed ?claim-err] (q/claim-pending! qname
+                                                               :as :worker-2
+                                                               :min-idle-ms 10
+                                                               :ids claim-ids)]
+                    (is (nil? ?claim-err))
+                    (is (= 2 (count claimed)))
+                    (is (= [{:n 1} {:n 2}] (mapv :msg claimed)))
+
+                    ;; Verify PEL ownership transferred to worker-2
+                    (let [[summary ?sum-err] (q/read-pending-summary qname)]
+                      (is (nil? ?sum-err))
+                      (is (= 2 (:total summary)))
+                      (is (nil? (get-in summary [:consumers :worker-1])))
+                      (is (= 2 (get-in summary [:consumers :worker-2]))))
+
+                    ;; Worker-2 acks claimed messages
+                    (let [[acked ?ack-err] (apply q/set-processed! qname claim-ids)]
+                      (is (nil? ?ack-err))
+                      (is (= 2 acked)))))
+
+                ;; Delete 1 message via XDEL and trim remaining to MAXLEN 2
+                (let [[n-del ?del-err] (q/del-msg! qname (first put-ids))
+                      [n-trim ?trim-err] (q/trim! qname :maxlen 2)
+                      [len-after ?len-err2] (q/stream-len qname)
+                      [destroy-status ?destroy-err] (q/destroy-queue! qname conn)]
+                  (is (nil? ?del-err))
+                  (is (= 1 n-del))
+                  (is (nil? ?trim-err))
+                  (is (= 1 n-trim))
+                  (is (nil? ?len-err2))
+                  (is (= 2 len-after))
+                  (is (nil? ?destroy-err))
+                  (is (= :spec-destroyed_stream-destroyed destroy-status)))))]
+      (testing "stream recovery | Redis standalone"
+        (-test-recovery :standalone tu/conn-redis-standalone))
+      (testing "stream recovery | Kvrocks standalone"
+        (-test-recovery :standalone tu/conn-kvrocks-standalone))
+      (testing "stream recovery | Kvrocks cluster"
+        (-test-recovery :cluster tu/conn-kvrocks-cluster)))))

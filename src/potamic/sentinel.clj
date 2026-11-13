@@ -864,12 +864,13 @@
   (start-sentinel! [this]
     (let [queue-exists? (p/get-queue queue-name)
           [_ ?create-err] (when-not queue-exists?
-                            (p/create-queue! queue-name
-                                             queue-conn
-                                             :group queue-group
-                                             :init-id init-id)
-
-                            (log/info STQ-LABEL "Created queue: " queue-name))]
+                            (let [res (p/create-queue! queue-name
+                                                       queue-conn
+                                                       :group queue-group
+                                                       :init-id init-id)]
+                              (when-not (second res)
+                                (log/info STQ-LABEL "Created queue: " queue-name))
+                              res))]
       (if ?create-err
         (let [err (e/error
                     {:potamic/err-type :potamic/internal-err
@@ -878,30 +879,36 @@
                                            "Sentinel '" queue-name "'.")
                      :potamic/err-data {:this this :err ?create-err}})]
           (e/throw-potamic-error err))
-        (do
-          (when (pos-int? start-offset)
-            (async/<!! (async/timeout start-offset)))
-          (set-attr this :started? true)
-          (set-attr this :stopped? false)
-          (log/info STQ-LABEL (str "Started Sentinel:" queue-name))
-          (async/go-loop
-            [this this, n-runs 0]
-            (let [n-runs (inc n-runs)
-                  this (set-attr this :n-runs n-runs)
-                  [?signal _] (async/alts! [signal-chan
-                                            (async/timeout frequency)])]
-              (if (= ?signal :stop)
-                (do (set-attr this :started? false)
-                    (set-attr this :stopped? true)
-                    (log/info STQ-LABEL "Stopped Sentinel for " queue-name)
-                    nil)
-                (do
-                  (handler this)
-                  (recur this n-runs)))))
-          this))))
+        (if (get-attr this :started?)
+          this
+          (do
+            (set-attr this :started? true)
+            (set-attr this :stopped? false)
+            (async/thread
+              (when (pos-int? start-offset)
+                (async/<!! (async/timeout start-offset)))
+              (log/info STQ-LABEL (str "Started Sentinel: " queue-name))
+              (loop [n-runs 0]
+                (let [n-runs (inc n-runs)
+                      _ (set-attr this :n-runs n-runs)
+                      [?signal _] (async/alts!! [signal-chan
+                                                 (async/timeout frequency)])]
+                  (if (= ?signal :stop)
+                    (do (set-attr this :started? false)
+                        (set-attr this :stopped? true)
+                        (log/info STQ-LABEL "Stopped Sentinel for " queue-name)
+                        nil)
+                    (do
+                      (try
+                        (handler this)
+                        (catch Throwable t
+                          (set-attr this :last-error (potamic.util/make-exception t))
+                          (log/error t STQ-LABEL "Handler error in Sentinel: " queue-name)))
+                      (recur n-runs))))))
+            this)))))
 
   (stop-sentinel! [this]
-    (async/go (async/>! (get-signal-channel this) :stop))
+    (async/put! (get-signal-channel this) :stop)
     this))
 
 (defn create-sentinel
@@ -995,10 +1002,11 @@
                    :potamic/err-msg (str "Invalid args provided to "
                                          "potamic.sentinel/create-sentinel.")
                    :potamic/err-data {:args args
-                                :err args-err}})]
+                                      :err args-err}})]
         (e/throw-potamic-error err))
       (let [state (atom {:started? false :stopped? false :n-runs 0})
-            signal-chan (async/chan)]
+            signal-chan (async/chan (async/sliding-buffer 1))]
         (map->Sentinel (assoc args
                               :state state
                               :signal-chan signal-chan))))))
+

@@ -1,5 +1,5 @@
 (ns potamic.sentinel.validation
-  "Validation for `st.queue` library."
+  "Validation for `potamic.sentinel` library."
   {:added "5.0"
    :author "@yeajustmars"}
   (:require [malli.core :as malli]
@@ -15,6 +15,5 @@
      [:queue-group QueueValue]
      [:frequency int?]
      [:handler (v/f fn? "Handler must be a function")]
-     [:init-id {:optional true} int?]
+     [:init-id {:optional true} [:or int? string?]]
      [:start-offset {:optional true} int?]]))
-
